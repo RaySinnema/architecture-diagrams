@@ -56,9 +56,9 @@ The concepts in such a model are:
   us right now.
   We could define different types of external systems, for instance based on whether they are maintained by the
   organization itself or by a different organization.
-- **Flow** A sequence of _occurrences_, where one _occurrence_ in the sequence logically leads to the next.
 - **Form** Part of the system that provides a User Interface to a _persona_.
   A form can show a view, let the _persona_ issue a _command_, or both.
+- **Logical flow** A sequence of _occurrences_, where one _occurrence_ in the sequence logically leads to the next.
 - **Occurrence** Something that happens in a _system_.
   This can be a _command_ that is issued, an _event_ that takes place, a _view_ that gets updated, or
   an _external systems_ that gets called.
@@ -76,8 +76,8 @@ The concepts in such a model are:
   diagram.
 - **Technology** The languages, frameworks, tools, platforms, etc. used to implement a part of a _system_.
 - **View** Part of the data in the _system_ that is prepared so that it can be easily queried for a specific purpose.
-- **Workflow** A logical flow through the _system_ during which a _persona_ accomplishes something.
-  A workflow consists of one or more _flows_.
+- **Workflow** A logical thread through the _system_ during which a _persona_ accomplishes something.
+  A workflow consists of one or more _logical flows_.
 
 TODO: Link these concepts in a diagram
 
