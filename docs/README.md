@@ -31,7 +31,11 @@ of your system that captures these things and from which you can generate both t
 Let's look at the concepts used in some different types of diagrams:
 
 ![Context diagram](context-diagram.jpg)
+
 ![Container diagram](container-diagram.jpg)
+
 ![Data flow diagram](data-flow-diagram.jpg)
+
 ![Event model](event-model.jpg)
+
 ![Tech radar](tech-radar.jpg)
