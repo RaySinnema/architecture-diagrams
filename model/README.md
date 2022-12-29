@@ -45,10 +45,11 @@ What's important now is that we can use them as a basis to build a better model 
 
 The concepts in such a model are:
 
+- **Activity** Something that happens in a _system_.
+  This can be a _command_ that is issued, an _event_ that occurs, a _view_ that gets updated, or
+  an _external systems_ that gets called.
 - **Command** A request to change the _system_ in some way.
   A command is issued by a _service_, _form_, or _external system_ and handled by a _service_.
-- **Data flow** A transfer of data between parts of a _system_ or between the _system_ and a _persona_ or 
-  _external system_.
 - **Database** A part of a _system_ that stores data for one or more _services_.
 - **Event** A piece of data sent from one _service_ to another, which signals to the recipient that something
   interesting has happened.
@@ -58,10 +59,6 @@ The concepts in such a model are:
   organization itself or by a different organization.
 - **Form** Part of the system that provides a User Interface to a _persona_.
   A form can show a view, let the _persona_ issue a _command_, or both.
-- **Logical flow** A sequence of _occurrences_, where one _occurrence_ in the sequence logically leads to the next.
-- **Occurrence** Something that happens in a _system_.
-  This can be a _command_ that is issued, an _event_ that takes place, a _view_ that gets updated, or
-  an _external systems_ that gets called.
 - **Persona** A human that interacts with a _system_.
   A persona is not an actual person, but more the role they play when interacting with the _system_.
 - **Queue** A part of a _system_ that temporarily stores data so that one _service_ can transfer that data to another
@@ -75,10 +72,11 @@ The concepts in such a model are:
 - **System** A software application that helps one or more _personas_ perform their duties and is the focus of the
   diagram.
 - **Technology** The languages, frameworks, tools, platforms, etc. used to implement a part of a _system_.
+- **Timeline** A sequence of _activities_, where one _activity_ in the sequence logically leads to the next.
 - **View** Part of the data in the _system_ that is prepared so that it can be easily queried for a specific purpose.
 - **Workflow** A logical thread through the _system_ during which a _persona_ accomplishes something.
   A workflow consists of one or more _logical flows_.
 
 TODO: Link these concepts in a diagram
 
-![Conceptual model](model.png)
+![Conceptual model](model-d2.png)
