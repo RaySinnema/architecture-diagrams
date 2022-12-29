@@ -75,8 +75,8 @@ The concepts in such a model are:
   diagram.
 - **Technology** The languages, frameworks, tools, platforms, etc. used to implement a part of a _system_.
 - **Timeline** A sequence of _activities_, where one _activity_ in the sequence logically leads to the next.
-- **View** Part of the data in the _system_ that is prepared so that it can be easily queried for a specific purpose.
+- **View** A subset of the data in the _system_ that is prepared so that it can be easily queried for a specific purpose.
 - **Workflow** A logical thread through the _system_ during which a _persona_ accomplishes something.
-  A workflow consists of one or more _logical flows_.
+  A workflow consists of one or more _timelines_.
 
 ![Conceptual model](model.png)
