@@ -50,6 +50,7 @@ The concepts in such a model are:
 - **Call** A machine-to-machine communication between two _participants_.
 - **Command** A request to change the _system_ in some way.
   A command is issued by a _service_, _form_, or _external system_ and handled by a _service_.
+- **Data Store** Something that can hold data: either a _database_ or a _queue_.
 - **Database** A part of a _system_ that stores data for one or more _services_.
 - **Event** A piece of data sent from one _service_ to another, which signals to the recipient that something
   interesting has happened.
@@ -70,7 +71,7 @@ The concepts in such a model are:
 - **Service** A part of a _system_ that is deployed as a single unit, independently of other services.
   In a microservice architecture, this would be a microservice, but the concept also applies to Service Oriented
   Architectures.
-  Either way, a service is stateless.
+  Either way, a service is stateless; it stores its state in a _Data Store_
 - **System** A software application that helps one or more _personas_ perform their duties and is the focus of the
   diagram.
 - **Technology** The languages, frameworks, tools, platforms, etc. used to implement a part of a _system_.
