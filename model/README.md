@@ -45,9 +45,9 @@ What's important now is that we can use them as a basis to build a better model 
 
 The concepts in such a model are:
 
-- **Activity** Something that happens in a _system_.
-  This can be a _command_ that is issued, an _event_ that occurs, a _view_ that gets updated, or
-  an _external systems_ that gets called.
+- **Activity** Something that happens in a _system_: a _command is issued_, an _event happened_, a _view gets updated_, 
+  or an _external system gets called_.
+- **Call** A machine-to-machine communication between two _participants_.
 - **Command** A request to change the _system_ in some way.
   A command is issued by a _service_, _form_, or _external system_ and handled by a _service_.
 - **Database** A part of a _system_ that stores data for one or more _services_.
@@ -59,6 +59,8 @@ The concepts in such a model are:
   organization itself or by a different organization.
 - **Form** Part of the system that provides a User Interface to a _persona_.
   A form can show a view, let the _persona_ issue a _command_, or both.
+- **Participant** A running piece of code that participates in a _call_, either as the initiator or as the target.
+- **Performer** Someone or something that performs an _activity_.
 - **Persona** A human that interacts with a _system_.
   A persona is not an actual person, but more the role they play when interacting with the _system_.
 - **Queue** A part of a _system_ that temporarily stores data so that one _service_ can transfer that data to another
@@ -77,6 +79,4 @@ The concepts in such a model are:
 - **Workflow** A logical thread through the _system_ during which a _persona_ accomplishes something.
   A workflow consists of one or more _logical flows_.
 
-TODO: Link these concepts in a diagram
-
-![Conceptual model](model-d2.png)
+![Conceptual model](model.png)
