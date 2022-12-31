@@ -45,8 +45,6 @@ What's important now is that we can use them as a basis to build a better model 
 
 The concepts in such a model are:
 
-- **Activity** Something that happens in a _system_: a _command is issued_, an _event happened_, a _view gets updated_, 
-  or an _external system gets called_.
 - **Call** A machine-to-machine communication between two _participants_.
 - **Command** A request to change the _system_ in some way.
   A command is issued by a _service_, _form_, or _external system_ and handled by a _service_.
@@ -61,6 +59,7 @@ The concepts in such a model are:
 - **Form** Part of the system that provides a User Interface to a _persona_.
   A form can show a view, let the _persona_ issue a _command_, or both.
 - **Participant** A running piece of code that participates in a _call_, either as the initiator or as the target.
+  A participant is either a _service_ or an _external system_.
 - **Performer** Someone or something that performs an _activity_.
 - **Persona** A human that interacts with a _system_.
   A persona is not an actual person, but more the role they play when interacting with the _system_.
@@ -72,12 +71,265 @@ The concepts in such a model are:
   In a microservice architecture, this would be a microservice, but the concept also applies to Service Oriented
   Architectures.
   Either way, a service is stateless; it stores its state in a _Data Store_
+- **Step** Something that happens in a _workflow_: a _command is issued_, an _event happened_, a _view gets updated_,
+  or an _external system gets called_.
 - **System** A software application that helps one or more _personas_ perform their duties and is the focus of the
   diagram.
 - **Technology** The languages, frameworks, tools, platforms, etc. used to implement a part of a _system_.
-- **Timeline** A sequence of _activities_, where one _activity_ in the sequence logically leads to the next.
 - **View** A subset of the data in the _system_ that is prepared so that it can be easily queried for a specific purpose.
-- **Workflow** A logical thread through the _system_ during which a _persona_ accomplishes something.
-  A workflow consists of one or more _timelines_.
+- **Workflow** A sequence of _steps_, during which a _persona_ accomplishes something.
 
 ![Conceptual model](model.png)
+
+
+## Representation
+
+The conceptual model allows humans to think about architecture diagrams, but for tools to work with them, we need a
+representation that we can store in a file.
+We'll use YAML for this purpose, because it's text-based (good for version control), expressive yet terse, 
+and widely used.
+
+
+### Version
+
+An architecture model YAML file may contain a `version` top-level element:
+
+```yaml
+version: 1.0
+```
+
+If omitted, `1.0` is assumed.
+The only valid value at this time is `1.0`.
+
+
+### System
+
+An architecture model YAML file may contain a `system` top-level element:
+
+```yaml
+system:
+  name: My system
+```
+
+If omitted, a system is inferred from the file name.
+
+
+### Personas
+
+An architectural model YAML file should contain a `personas` top-level element.
+Without personas that the system supports, there would be no point in having the system in the first place.
+
+```yaml
+personas:
+  cs:
+    name: Customer Support
+    uses:
+      - externalSystem: jira
+        description: Updates issues
+  dev:
+    name: Developer
+    uses:
+      - externalSystem: slack
+        description: Reads notification
+      - form: subscriptions
+        description: Maintains subscriber
+      - form: subscriptionsOld
+        description: Maintains subscriber
+```
+
+The `personas` element is a map where each item defines a persona.
+The `name` is optional; when omitted a human-friendly version of the key is used.
+
+The `uses` list refers to the [external systems](#external-systems) and [forms](#services) the persona uses.
+
+
+### External systems
+
+External systems are modeled using the top-level `externalSystems` element:
+
+```yaml
+externalSystems:
+  slack:
+    name: Slack
+    type: central
+```
+
+The `externalSystems` element is a map where each item defines an external system.
+The `name` is optional; when omitted a human-friendly version of the key is used.
+
+The `type` is also optional.
+It can be any string value.
+There are no semantics associated with these values, but they can be used for rendering external systems differently.
+
+
+### Services
+
+Services are modeled using the top-level `services` element:
+
+```yaml
+services:
+  api:
+    name: API
+    technologies: server
+    dataStores:
+      - queue: events
+        description: Writes domain events
+        flow: send
+  form:
+    name: Privacy Form
+    technologies: serverWithUi
+    forms:
+      - privacy
+    calls:
+      - service: api
+        description: Calls
+        dataFlow: send
+        technologies: jsonOverHttp
+```
+
+The `services` element is a map where each item defines a service.
+The `name` is optional; when omitted a human-friendly version of the key is used.
+
+The value of the `technologies` key is either a string value or a list of string values.
+A single string value points to a [technology bundle](#technology-bundles), whereas a list contains individual
+[technologies](#technologies).
+
+A service may have an optional [state](#states); if omitted, `ok` is assumed.
+
+The `dataStores` property contains a list of data stores.
+Each data store is a map that has either a `queue` or a `database` key, which refers to a [queue](#queues) or
+[database](#databases), respectively.
+
+A data store's `dataFlow` may be either `send`, `receive` or `bidirectional`.
+When omitted, `bidirectional` is assumed.
+This property describes the flow of data from the perspective of the service, so `send` means that the service sends
+data to the data store, but gets nothing substantial back.
+
+The `forms` property contains a list of forms implemented by the service.
+To specify the form's [state](#states), use a map instead:
+
+```yaml
+services:
+  form:
+    # ...
+    forms:
+      privacy:
+        state: review
+```
+
+The `calls` property lists which services and [external systems](#external-systems) this service calls.
+The `technologies` for the call works the same way as for the service itself.
+The `dataFlow` for the call works the same way as for data stores.
+
+
+### Databases
+
+Databases are modeled using the top-level `databases` element:
+
+```yaml
+databases:
+  subscriptions:
+    name: Subscriptions & in-flight requests
+    technologies: cloudMySql
+    apiTechnology: sql
+```
+
+The `databases` element is a map where each item defines a database.
+The `name` is optional; when omitted a human-friendly version of the key is used.
+
+The value of the `technologies` key is either a string value or a list of string values.
+A single string value points to a [technology bundle](#technology-bundles), whereas a list contains individual
+[technologies](#technologies).
+
+The `apiTechnology` lists to the technology used to communicate with the database via its API.
+
+A database may have an optional [state](#states); if omitted, `ok` is assumed.
+
+
+### Queues
+
+Queues are modeled using the top-level `queues` element:
+
+```yaml
+queues:
+  events:
+    name: Domain Events
+    description: One topic per event type.
+    technologies:
+      - pubsub
+    apiTechnology: grpc
+```
+
+The `queues` element is a map where each item defines a queue.
+The `name` is optional; when omitted a human-friendly version of the key is used.
+
+The value of the `technologies` key is either a string value or a list of string values.
+A single string value points to a [technology bundle](#technology-bundles), whereas a list contains individual
+[technologies](#technologies).
+
+The `apiTechnology` lists the technology used to communicate with the queue via its API.
+
+A queue may have an optional [state](#states); if omitted, `ok` is assumed.
+
+
+### Technologies
+
+Technologies are modeled using the top-level `technologies` element:
+
+```yaml
+technologies:
+  cloudSql:
+    name: CloudSQL
+    quadrant: platforms
+    ring: hold
+    description: Replace with AWS technology
+```
+
+The `technologies` element is a map where each item defines a technology.
+The `name` is optional; when omitted a human-friendly version of the key is used.
+
+The `quadrant` specifies the type of technology.
+Possible values are `languagesAndFrameworks`, `platforms`, `tools`, and `techniques`.
+
+The `ring` specifies the adoption stage of the technology.
+Possible values are `asses`, `trial`, `adopt`, and `hold`.
+If omitted, `adopt` is assumed.
+
+
+### Technology bundles
+
+It's fairly common for a team to have a Golden Path for a tech stack.
+This favored list of [technologies](#technologies) gets used for most, if not all, [services](#services).
+When both the list of services and the list of technologies used get larger, the burden of specifying the
+technologies over and over again increases.
+
+This burden can be reduced by bundling technologies:
+
+```yaml
+technologyBundles:
+  server:
+    - java
+    - spring
+  serverWithUi:
+    - server
+    - thymeleaf
+```
+
+The `technologyBundles` element is a map where each item defines a technology bundle, which is nothing but a list
+of references to technologies and/or other technology bundles.
+
+
+### States
+
+A system is implemented using [services](#services), which get created, modified, and retired over time.
+This lifecycle is captured using the `state` property, which can have the following values:
+
+- `ok` - The default. The component is fit for use.
+- `emerging` - The component doesn't exist yet or is not quite ready for use.
+- `review` - The component is under review; it's not yet clear what it's state is.
+- `revision` - The component needs some changes, but it needn't be replaced.
+- `legacy` - The component needs to be replaced, but its alternative is still `emerging`. 
+- `deprecated` - The component is ready to be removed; the alternative is already in place.
+
+These states are applicable to [services](#services), [databases](#databases), [queues](#queues), and
+[forms](#services).
