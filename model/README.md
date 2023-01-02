@@ -43,7 +43,10 @@ I'm sure the above pictures are incomplete.
 That's fine, we can refine the model over time.
 What's important now is that we can use them as a basis to build a better model for architectural diagrams.
 
-The concepts in such a model are:
+
+## Conceptual model for architecture diagrams
+
+We recognize the following concepts:
 
 - **Call** A machine-to-machine communication between two _participants_.
 - **Command** A request to change the _system_ in some way.
