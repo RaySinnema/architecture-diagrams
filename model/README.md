@@ -60,7 +60,7 @@ The concepts in such a model are:
   A form can show a view, let the _persona_ issue a _command_, or both.
 - **Participant** A running piece of code that participates in a _call_, either as the initiator or as the target.
   A participant is either a _service_ or an _external system_.
-- **Performer** Someone or something that performs an _activity_.
+- **Performer** Someone or something that performs a _step_.
 - **Persona** A human that interacts with a _system_.
   A persona is not an actual person, but more the role they play when interacting with the _system_.
 - **Queue** A part of a _system_ that temporarily stores data so that one _service_ can transfer that data to another
@@ -72,7 +72,7 @@ The concepts in such a model are:
   Architectures.
   Either way, a service is stateless; it stores its state in a _Data Store_
 - **Step** Something that happens in a _workflow_: a _command is issued_, an _event happened_, a _view gets updated_,
-  or an _external system gets called_.
+  _external system gets called_, etc.
 - **System** A software application that helps one or more _personas_ perform their duties and is the focus of the
   diagram.
 - **Technology** The languages, frameworks, tools, platforms, etc. used to implement a part of a _system_.
@@ -322,7 +322,7 @@ of references to technologies and/or other technology bundles.
 ### States
 
 A system is implemented using [services](#services), which get created, modified, and retired over time.
-This lifecycle is captured using the `state` property, which can have the following values:
+This lifecycle is captured using the optional `state` property, which can have the following values:
 
 - `ok` - The default. The component is fit for use.
 - `emerging` - The component doesn't exist yet or is not quite ready for use.
@@ -333,3 +333,51 @@ This lifecycle is captured using the `state` property, which can have the follow
 
 These states are applicable to [services](#services), [databases](#databases), [queues](#queues), and
 [forms](#services).
+
+
+## Workflows
+
+Workflows are modeled using the top-level `workflows` element:
+
+```yaml
+workflows:
+  register:
+    name: Guest registers with hotel
+    steps:
+      - performer: guest            # persona
+        form: registrationForm
+      - performer: registrationForm # form
+        command: Register
+      - performer: auth             # service
+        event: Registered
+```
+
+The `workflows` element is a map where each item defines a workflow.
+The `name` is optional; when omitted a human-friendly version of the key is used.
+
+The `steps` list contains the steps of the workflow.
+A step is either a simple step or a sub-workflow.
+
+Each simple step must have a `performer`, which refers to a persona, form, external system, or service.
+Depending on the type of step, additional information is required.
+For instance, for a _Form used_ step, the `form` indicates which form the performer uses.
+
+A sub-workflow has only a single property `workflow`, which refers to another workflow:
+
+```yaml
+workflows:
+  main:
+    name: The main workflow
+    steps:
+      # Some steps to start
+      # ...
+      - workflow: included # The workflow to include
+      # Some steps to end
+  included:
+    name: A sub-workflow to be included into other workflows
+    steps:
+      # ...
+```
+
+Steps in a workflow that is used as a sub-workflow can also include sub-workflows, so arbitrarily deeply nested
+workflows are possible.
