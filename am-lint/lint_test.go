@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -8,7 +9,7 @@ import (
 func TestInvalidYaml(t *testing.T) {
 	invalidYaml := `version 1.0`
 
-	model, issues := Lint(invalidYaml)
+	model, issues := LintText(invalidYaml)
 
 	if model != nil {
 		t.Errorf("Got model from invalid YAML")
@@ -36,7 +37,7 @@ func hasError(message string) func(issue Issue) bool {
 func TestVersion(t *testing.T) {
 	yamlWithVersion := `version: 1.0`
 
-	model, _ := Lint(yamlWithVersion)
+	model, _ := LintText(yamlWithVersion)
 
 	if model == nil {
 		t.Errorf("Missing model")
@@ -49,7 +50,7 @@ func TestVersion(t *testing.T) {
 func TestDefaultVersion(t *testing.T) {
 	yamlWithoutVersion := ``
 
-	model, _ := Lint(yamlWithoutVersion)
+	model, _ := LintText(yamlWithoutVersion)
 
 	if model.version != "1.0" {
 		t.Errorf("Incorrect version: '%v'", model.version)
@@ -59,7 +60,7 @@ func TestDefaultVersion(t *testing.T) {
 func TestIncorrectVersion(t *testing.T) {
 	yamlWithIncorrectVersion := `version: ape`
 
-	model, issues := Lint(yamlWithIncorrectVersion)
+	model, issues := LintText(yamlWithIncorrectVersion)
 
 	if !hasIssue(issues, hasError("Version must be a semantic version as defined by https://semver.org")) {
 		t.Errorf("Accepts incorrect version")
@@ -72,12 +73,63 @@ func TestIncorrectVersion(t *testing.T) {
 func TestFutureVersion(t *testing.T) {
 	yamlWithFutureVersion := `version: 3.14`
 
-	model, issues := Lint(yamlWithFutureVersion)
+	model, issues := LintText(yamlWithFutureVersion)
 
 	if !hasIssue(issues, hasError("Undefined version")) {
 		t.Errorf("Accepts future version")
 	}
 	if model.version != "" {
 		t.Errorf("Model has version: '%v'", model.version)
+	}
+}
+
+func TestSystemName(t *testing.T) {
+	yamlWithFutureVersion := `system:
+  name: foo`
+
+	model, _ := LintText(yamlWithFutureVersion)
+
+	if model.system.name != "foo" {
+		t.Errorf("Model has system: '%v'", model.system.name)
+	}
+}
+
+func TestDefaultSystemName(t *testing.T) {
+	fileName := "a-system-named-foo.yaml"
+	if err := os.WriteFile(fileName, []byte(`version: 1.0`), 0644); err != nil {
+		t.Errorf("Failed to create test file")
+	}
+	defer func() {
+		if err := os.Remove(fileName); err != nil {
+			t.Errorf("Failed to delete test file")
+		}
+	}()
+
+	model, _ := LintFile(fileName)
+
+	if model.system.name != "A system named foo" {
+		t.Errorf("Model has system: '%v'", model.system.name)
+	}
+}
+
+func TestEmptySystemName(t *testing.T) {
+	yamlWithFutureVersion := `system:
+  name: ''`
+
+	_, issues := LintText(yamlWithFutureVersion)
+
+	if !hasIssue(issues, hasError("Missing system name")) {
+		t.Errorf("No error about missing system name")
+	}
+}
+
+func TestNonStringSystem(t *testing.T) {
+	yamlWithFutureVersion := `system:
+  name: 3.14`
+
+	model, _ := LintText(yamlWithFutureVersion)
+
+	if model.system.name != "3.14" {
+		t.Errorf("Model has system: '%v'", model.system.name)
 	}
 }
