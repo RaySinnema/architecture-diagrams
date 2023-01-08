@@ -1,10 +1,10 @@
 package main
 
 type System struct {
-	name string
+	Name string
 }
 
 type ArchitectureModel struct {
-	version string
-	system  System
+	Version string
+	System  System
 }

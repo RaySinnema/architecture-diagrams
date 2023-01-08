@@ -6,32 +6,60 @@ import (
 	"os"
 )
 
-var readers = []ModelPartReader{VersionReader{}, SystemReader{}}
+var readers = map[string]ModelPartReader{"version": VersionReader{}, "system": SystemReader{}}
 
 func LintText(text string) (*ArchitectureModel, []Issue) {
 	model, issues := lint(text, "")
 	return model, issues
 }
 
-func lint(definition string, fileName string) (*ArchitectureModel, []Issue) {
-	m := make(map[string]interface{})
-	if err := yaml.Unmarshal([]byte(definition), &m); err != nil {
-		return nil, []Issue{*NewError("Invalid YAML")}
+func lint(definition string, fileName string) (model *ArchitectureModel, issues []Issue) {
+	var node yaml.Node
+	err := yaml.Unmarshal([]byte(definition), &node)
+	if err != nil {
+		return nil, invalidYaml()
 	}
-	issues := make([]Issue, 0)
-	model := ArchitectureModel{}
-
-	for _, reader := range readers {
-		issues = append(issues, reader.read(m, fileName, &model)...)
+	if !node.IsZero() {
+		if node.Kind != yaml.DocumentNode || node.Content[0].Kind != yaml.MappingNode {
+			return nil, invalidYaml()
+		}
+		node = *node.Content[0]
 	}
 
-	return &model, issues
+	issues = make([]Issue, 0)
+	model = &ArchitectureModel{}
+	tags := make(map[string]string, len(node.Content)/2)
+	var tag string
+	for index, child := range node.Content {
+		if index%2 == 0 { // Key
+			tag = child.Value
+			tags[tag] = tag
+		} else { // Value
+			reader, exists := readers[tag]
+			if exists {
+				issues = append(issues, reader.read(child, fileName, model)...)
+			} else {
+				issues = append(issues, *NodeWarning(fmt.Sprint("Unknown top-level element: ", tag), child))
+			}
+		}
+	}
+	var reader ModelPartReader
+	for tag, reader = range readers {
+		if _, processed := tags[tag]; !processed {
+			issues = append(issues, reader.read(nil, fileName, model)...)
+		}
+	}
+	return
+}
+
+func invalidYaml() []Issue {
+	return []Issue{*FileError("Invalid YAML")}
 }
 
 func LintFile(fileName string) (*ArchitectureModel, []Issue) {
 	bytes, err := os.ReadFile(fileName)
 	if err != nil {
-		return nil, []Issue{*NewError(fmt.Sprintf("Couldn't read file %s: %v", fileName, err))}
+		return nil, []Issue{*FileError(fmt.Sprintf("Couldn't read file %s: %v", fileName, err))}
 	}
 	model, issues := lint(string(bytes), fileName)
 	return model, issues

@@ -1,7 +1,18 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func main() {
-	fmt.Println("Hello")
+	definition := `system: foo
+`
+	model, issues := LintText(definition)
+
+	fmt.Println("Issues:")
+	for issue := range issues {
+		fmt.Println(issue)
+	}
+	fmt.Println("Model:")
+	fmt.Println(model)
 }

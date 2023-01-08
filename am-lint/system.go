@@ -1,31 +1,26 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"gopkg.in/yaml.v3"
+)
 
 type SystemReader struct {
 }
 
-func (_ SystemReader) read(m map[string]interface{}, fileName string, model *ArchitectureModel) []Issue {
-	name := systemOf(m, fileName)
-	if len(name) == 0 {
-		return []Issue{*NewError("Missing system name")}
+func (_ SystemReader) read(node *yaml.Node, fileName string, model *ArchitectureModel) []Issue {
+	content := make(map[string]string)
+	if node != nil {
+		err := node.Decode(&content)
+		if err != nil {
+			return []Issue{*NodeError(fmt.Sprintf("invalid system: %v", err), node)}
+		}
 	}
-	model.system.name = name
+	name, found := content["name"]
+	if found {
+		model.System.Name = name
+	} else {
+		model.System.Name = friendly(fileName)
+	}
 	return []Issue{}
-}
-
-func systemOf(m map[string]interface{}, fileName string) string {
-	raw, exists := m["system"]
-	if !exists {
-		return friendly(fileName)
-	}
-	system, ok := raw.(map[string]interface{})
-	if !ok {
-		return friendly(fileName)
-	}
-	name, exists := system["name"]
-	if !exists {
-		return friendly(fileName)
-	}
-	return fmt.Sprintf("%v", name)
 }
