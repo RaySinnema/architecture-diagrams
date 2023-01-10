@@ -136,3 +136,47 @@ func TestNonStringSystem(t *testing.T) {
 		t.Errorf("Model has system: '%v'", model.System.Name)
 	}
 }
+
+func TestPersonas(t *testing.T) {
+	yamlWithPersonas := `personas:
+  dev:
+    name: Developer
+    uses:
+      - externalSystem: slack
+        description: Reads notifications
+      - form: subscriptions
+        description: Maintains subscriber
+  cs:
+    name: Customer Support
+    uses:
+      - externalSystem: jira
+        description: Updates issues
+`
+
+	model, _ := LintText(yamlWithPersonas)
+
+	if len(model.Personas) != 2 {
+		t.Fatalf("Incorrect number of personas: %v", len(model.Personas))
+	}
+	if model.Personas[0].Name != "Customer Support" {
+		t.Errorf("Personas not sorted: incorrect name for 1st persona: %v", model.Personas[0].Name)
+	}
+}
+
+func TestDefaultPersonaName(t *testing.T) {
+	yamlWithPersonas := `personas:
+  dev:
+    uses:
+      - externalSystem: slack
+        description: Reads notifications
+`
+
+	model, _ := LintText(yamlWithPersonas)
+
+	if len(model.Personas) != 1 {
+		t.Fatalf("Incorrect number of personas: %v", len(model.Personas))
+	}
+	if model.Personas[0].Name != "Dev" {
+		t.Errorf("Incorrect name: '%v'", model.Personas[0].Name)
+	}
+}

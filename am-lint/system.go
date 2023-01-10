@@ -5,6 +5,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type System struct {
+	Name string
+}
+
 type SystemReader struct {
 }
 

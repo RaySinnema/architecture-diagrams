@@ -6,7 +6,10 @@ import (
 	"os"
 )
 
-var readers = map[string]ModelPartReader{"version": VersionReader{}, "system": SystemReader{}}
+var readers = map[string]ModelPartReader{
+	"version":  VersionReader{},
+	"system":   SystemReader{},
+	"personas": PersonaReader{}}
 
 func LintText(text string) (*ArchitectureModel, []Issue) {
 	model, issues := lint(text, "")
