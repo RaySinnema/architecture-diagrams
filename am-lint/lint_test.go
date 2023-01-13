@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -178,5 +179,49 @@ func TestDefaultPersonaName(t *testing.T) {
 	}
 	if model.Personas[0].Name != "Dev" {
 		t.Errorf("Incorrect name: '%v'", model.Personas[0].Name)
+	}
+}
+
+func TestInvalidPersona(t *testing.T) {
+	yamlWithInvalidPersonas := `personas:
+  dev:
+    foo:
+      bar: baz
+`
+
+	_, issues := LintText(yamlWithInvalidPersonas)
+
+	if !hasIssue(issues, hasError("Invalid persona")) {
+		t.Fatalf("No error on invalid personas")
+	}
+}
+
+func TestExternalSystem(t *testing.T) {
+	yamlWithExternalSystems := `externalSystems:
+  broker:
+    name: Privacy Broker
+    type: central
+  localPlatform:
+    name: Local platform
+    type: local
+    calls:
+      - service: api
+        description: Sends SAR / DDR / CID
+        dataFlow: send
+
+`
+
+	model, issues := LintText(yamlWithExternalSystems)
+
+	if model == nil {
+		t.Fatalf("Invalid YAML: %v", issues)
+	}
+	fmt.Printf("%+v\n", *model)
+
+	if len(model.ExternalSystems) != 2 {
+		t.Fatalf("Incorrect number of external systems: %v", len(model.ExternalSystems))
+	}
+	if model.ExternalSystems[0].Name != "Local platform" {
+		t.Errorf("External systems not sorted: incorrect name for 1st external system: %v", model.ExternalSystems[0].Name)
 	}
 }

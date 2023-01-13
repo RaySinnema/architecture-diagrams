@@ -7,9 +7,11 @@ import (
 )
 
 var readers = map[string]ModelPartReader{
-	"version":  VersionReader{},
-	"system":   SystemReader{},
-	"personas": PersonaReader{}}
+	"version":         VersionReader{},
+	"system":          SystemReader{},
+	"personas":        PersonaReader{},
+	"externalSystems": ExternalSystemReader{},
+}
 
 func LintText(text string) (*ArchitectureModel, []Issue) {
 	model, issues := lint(text, "")
@@ -29,26 +31,23 @@ func lint(definition string, fileName string) (model *ArchitectureModel, issues 
 		node = *node.Content[0]
 	}
 
-	issues = make([]Issue, 0)
 	model = &ArchitectureModel{}
-	tags := make(map[string]string, len(node.Content)/2)
-	var tag string
-	for index, child := range node.Content {
-		if index%2 == 0 { // Key
-			tag = child.Value
-			tags[tag] = tag
-		} else { // Value
-			reader, exists := readers[tag]
-			if exists {
-				issues = append(issues, reader.read(child, fileName, model)...)
-			} else {
-				issues = append(issues, *NodeWarning(fmt.Sprint("Unknown top-level element: ", tag), child))
-			}
+	issues = make([]Issue, 0)
+	children, issue := toMap(&node)
+	if issue != nil {
+		issues = append(issues, *issue)
+		return
+	}
+	for tag, child := range children {
+		reader, exists := readers[tag]
+		if exists {
+			issues = append(issues, reader.read(child, fileName, model)...)
+		} else {
+			issues = append(issues, *NodeWarning(fmt.Sprint("Unknown top-level element: ", tag), child))
 		}
 	}
-	var reader ModelPartReader
-	for tag, reader = range readers {
-		if _, processed := tags[tag]; !processed {
+	for tag, reader := range readers {
+		if _, processed := children[tag]; !processed {
 			issues = append(issues, reader.read(nil, fileName, model)...)
 		}
 	}

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"gopkg.in/yaml.v3"
 )
 
@@ -12,19 +11,23 @@ type System struct {
 type SystemReader struct {
 }
 
+const nameField = "name"
+
 func (_ SystemReader) read(node *yaml.Node, fileName string, model *ArchitectureModel) []Issue {
-	content := make(map[string]string)
 	if node != nil {
-		err := node.Decode(&content)
-		if err != nil {
-			return []Issue{*NodeError(fmt.Sprintf("invalid system: %v", err), node)}
+		details, issue := toMap(node)
+		if issue != nil {
+			return []Issue{*issue}
+		}
+		name, found, issue := stringFieldOf(details, nameField)
+		if issue != nil {
+			return []Issue{*issue}
+		}
+		if found {
+			model.System.Name = name
+			return []Issue{}
 		}
 	}
-	name, found := content["name"]
-	if found {
-		model.System.Name = name
-	} else {
-		model.System.Name = friendly(fileName)
-	}
+	model.System.Name = friendlyNameFrom(fileName)
 	return []Issue{}
 }

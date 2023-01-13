@@ -22,7 +22,7 @@ func (_ VersionReader) read(node *yaml.Node, _ string, model *ArchitectureModel)
 		model.Version = fmt.Sprintf("%v.%v.%v", maxMajorVersion, maxMinorVersion, maxPatchVersion)
 		return []Issue{}
 	}
-	version, issue := stringValueOf("version", node)
+	version, issue := toString(node, "version")
 	if issue != nil {
 		return []Issue{*issue}
 	}

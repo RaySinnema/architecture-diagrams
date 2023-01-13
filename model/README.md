@@ -155,6 +155,12 @@ externalSystems:
   slack:
     name: Slack
     type: central
+  localPlatform:
+    name: Local platform
+    type: local
+    calls:
+      - service: api
+        dataFlow: send
 ```
 
 The `externalSystems` element is a map where each item defines an external system.
