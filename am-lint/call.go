@@ -30,13 +30,13 @@ func (c *Call) read(node *yaml.Node, issues []Issue) []Issue {
 		issues = append(issues, *issue)
 	}
 	if serviceFound && systemFound {
-		issues = append(issues, *NodeError(fmt.Sprintf("Only one of '%v' and '%v' is allowed. If both are called, use two calls", serviceField, systemField), node))
+		issues = append(issues, *NodeError(fmt.Sprintf("A call may be to either a %v or to an %v. Split the call into two to call both.", serviceField, systemField), node))
 	} else if serviceFound {
 		c.ServiceName = serviceName
 	} else if systemFound {
 		c.ExternalSystemName = systemName
 	} else {
-		issues = append(issues, *NodeError(fmt.Sprintf("One of '%v' or '%v' is required", serviceField, systemField), node))
+		issues = append(issues, *NodeError(fmt.Sprintf("One of %v or %v is required", serviceField, systemField), node))
 	}
 	description, found, issue := stringFieldOf(fields, "description")
 	if issue != nil {
@@ -50,7 +50,7 @@ func (c *Call) read(node *yaml.Node, issues []Issue) []Issue {
 	} else if found {
 		allowed := []string{"send", "receive", "bidirectional"}
 		if hasDifferentValueThan(dataFlow, allowed) {
-			issues = append(issues, *NodeError(fmt.Sprintf("Invalid '%v': must be one of %v", dataFlowField, allowed), fields[dataFlowField]))
+			issues = append(issues, *NodeError(fmt.Sprintf("Invalid %v: must be one of %v", dataFlowField, stringsIn(allowed)), fields[dataFlowField]))
 		} else {
 			c.DataFlow = dataFlow
 		}
@@ -58,6 +58,20 @@ func (c *Call) read(node *yaml.Node, issues []Issue) []Issue {
 		c.DataFlow = "bidirectional"
 	}
 	return issues
+}
+
+func stringsIn(values []string) string {
+	result := ""
+	for index, value := range values {
+		if index == 0 {
+			result = fmt.Sprintf("'%v'", value)
+		} else if index == len(values)-1 {
+			result = fmt.Sprintf("%v, or '%v'", result, value)
+		} else {
+			result = fmt.Sprintf("%v, '%v'", result, value)
+		}
+	}
+	return result
 }
 
 func (c *Call) Callee() string {

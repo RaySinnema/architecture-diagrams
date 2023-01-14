@@ -39,6 +39,10 @@ func kindToString(kind yaml.Kind) string {
 		return "map"
 	case yaml.SequenceNode:
 		return "sequence"
+	case yaml.ScalarNode:
+		return "scalar"
+	case yaml.AliasNode:
+		return "alias"
 	default:
 		return strconv.FormatInt(int64(kind), 10)
 	}

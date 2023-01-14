@@ -60,7 +60,7 @@ func sequenceFieldOf(fields map[string]*yaml.Node, field string) ([]*yaml.Node, 
 	result := make([]*yaml.Node, 0)
 	node, found := fields[field]
 	if found {
-		result, issue := toSequence(node)
+		result, issue := toSequence(node, field)
 		if issue != nil {
 			return result, false, issue
 		}
@@ -69,9 +69,9 @@ func sequenceFieldOf(fields map[string]*yaml.Node, field string) ([]*yaml.Node, 
 	return result, false, nil
 }
 
-func toSequence(node *yaml.Node) ([]*yaml.Node, *Issue) {
+func toSequence(node *yaml.Node, field string) ([]*yaml.Node, *Issue) {
 	if node.Kind == yaml.SequenceNode {
 		return node.Content, nil
 	}
-	return []*yaml.Node{}, NodeError("Expected a sequence", node)
+	return []*yaml.Node{}, NeedTypeError(field, node, "sequence")
 }

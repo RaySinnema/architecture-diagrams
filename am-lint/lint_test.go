@@ -186,7 +186,7 @@ func TestEmptySystemName(t *testing.T) {
 	}
 }
 
-func TestNonStringSystem(t *testing.T) {
+func TestNonStringSystemName(t *testing.T) {
 	yamlWithFutureVersion := `system:
   name: 3.14`
 
@@ -211,7 +211,7 @@ func assertErrorsForInvalidDefinitions(t *testing.T, cases []InvalidDefinition) 
 		_, issues := LintText(c.definition)
 
 		if !hasIssue(issues, hasError(c.error)) {
-			t.Errorf("Missing error '%v' for invalid definition '%v'", c.error, c.definition)
+			t.Errorf("Missing error '%v' for invalid definition '%v'\n\nInstead, got: %+v", c.error, c.definition, issues)
 		}
 	}
 }
@@ -269,7 +269,7 @@ func TestInvalidPersonas(t *testing.T) {
 		{definition: `personas:
   foo:
     uses: bar
-`, error: "Expected a sequence"},
+`, error: "uses must be a sequence"},
 		{definition: `personas:
   foo:
     uses:
@@ -335,4 +335,68 @@ func TestExternalSystem(t *testing.T) {
 	if model.ExternalSystems[0].Name != "Local platform" {
 		t.Errorf("External systems not sorted: incorrect name for 1st external system: %v", model.ExternalSystems[0].Name)
 	}
+}
+
+func TestInvalidExternalSystems(t *testing.T) {
+	assertErrorsForInvalidDefinitions(t, []InvalidDefinition{
+		{definition: `externalSystems:
+  - foo
+  - bar
+`, error: "Expected a map"},
+		{definition: `externalSystems:
+  foo:
+    type:
+      bar: baz
+`, error: "type must be a string, not a map"},
+		{definition: `externalSystems:
+  foo:
+    calls:
+      bar: baz
+`, error: "calls must be a sequence, not a map"},
+		{definition: `externalSystems:
+  foo:
+    calls:
+      - bar
+`, error: "Expected a map"},
+		{definition: `externalSystems:
+  foo:
+    calls:
+      - service:
+          - bar
+`, error: "service must be a string"},
+		{definition: `externalSystems:
+  foo:
+    calls:
+      - externalSystem:
+          - bar
+`, error: "externalSystem must be a string"},
+		{definition: `externalSystems:
+  foo:
+    calls:
+      - externalSystem: bar
+        service: baz
+`, error: "A call may be to either a service or to an externalSystem"},
+		{definition: `externalSystems:
+  foo:
+    calls:
+      - description: bar
+`, error: "One of service or externalSystem is required"},
+		{definition: `externalSystems:
+  foo:
+    calls:
+      - description:
+          - bar
+`, error: "description must be a string"},
+		{definition: `externalSystems:
+  foo:
+    calls:
+      - dataFlow:
+          - bar
+`, error: "dataFlow must be a string"},
+		{definition: `externalSystems:
+  foo:
+    calls:
+      - dataFlow: bar
+`, error: "Invalid dataFlow: must be one of 'send', 'receive', or 'bidirectional'"},
+	})
 }
