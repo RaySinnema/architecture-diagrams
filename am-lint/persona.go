@@ -21,7 +21,7 @@ func (u *Used) read(node *yaml.Node, issues []Issue) []Issue {
 	if issue != nil {
 		issues = append(issues, *issue)
 	}
-	formName, foundForm, issue := stringFieldOf(fields, "externalSystem")
+	formName, foundForm, issue := stringFieldOf(fields, "form")
 	if issue != nil {
 		issues = append(issues, *issue)
 	}

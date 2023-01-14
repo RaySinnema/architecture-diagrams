@@ -49,7 +49,7 @@ func stringFieldOf(fields map[string]*yaml.Node, field string) (string, bool, *I
 	if found {
 		result, issue := toString(node, field)
 		if issue != nil {
-			return "", false, issue
+			return "", true, issue
 		}
 		return result, true, nil
 	}

@@ -6,6 +6,11 @@ import (
 	"testing"
 )
 
+type InvalidDefinition struct {
+	definition string
+	error      string
+}
+
 func TestInvalidYaml(t *testing.T) {
 	invalidYaml := `version 1.0`
 
@@ -192,25 +197,22 @@ func TestNonStringSystem(t *testing.T) {
 	}
 }
 
-func TestInvalidSystemStructure(t *testing.T) {
-	yamlWithFutureVersion := `system: foo`
-
-	_, issues := LintText(yamlWithFutureVersion)
-
-	if !hasIssue(issues, hasError("Expected a map")) {
-		t.Errorf("No error on invalid system structure")
-	}
+func TestInvalidSystems(t *testing.T) {
+	assertErrorsForInvalidDefinitions(t, []InvalidDefinition{
+		{definition: `system: foo`, error: "Expected a map"},
+		{definition: `system:
+  name:
+    bar: baz`, error: "name must be a string"},
+	})
 }
 
-func TestInvalidSystemNameStructure(t *testing.T) {
-	yamlWithFutureVersion := `system:
-  name:
-    bar: baz`
+func assertErrorsForInvalidDefinitions(t *testing.T, cases []InvalidDefinition) {
+	for _, c := range cases {
+		_, issues := LintText(c.definition)
 
-	_, issues := LintText(yamlWithFutureVersion)
-
-	if !hasIssue(issues, hasError("name must be a string")) {
-		t.Errorf("No error on invalid system name structure")
+		if !hasIssue(issues, hasError(c.error)) {
+			t.Errorf("Missing error '%v' for invalid definition '%v'", c.error, c.definition)
+		}
 	}
 }
 
@@ -258,18 +260,56 @@ func TestDefaultPersonaName(t *testing.T) {
 	}
 }
 
-func TestInvalidPersona(t *testing.T) {
-	yamlWithInvalidPersonas := `personas:
+func TestInvalidPersonas(t *testing.T) {
+	assertErrorsForInvalidDefinitions(t, []InvalidDefinition{
+		{definition: `personas:
+  - foo
+  - bar
+`, error: "Expected a map"},
+		{definition: `personas:
+  foo:
+    uses: bar
+`, error: "Expected a sequence"},
+		{definition: `personas:
+  foo:
+    uses:
+      - bar
+`, error: "Expected a map"},
+		{definition: `personas:
   dev:
     foo:
       bar: baz
-`
-
-	_, issues := LintText(yamlWithInvalidPersonas)
-
-	if !hasIssue(issues, hasError("Invalid persona")) {
-		t.Fatalf("No error on invalid personas")
-	}
+`, error: "Invalid persona"},
+		{definition: `personas:
+  foo:
+    uses:
+      - externalSystem:
+        - bar
+`, error: "externalSystem must be a string, not a sequence"},
+		{definition: `personas:
+  foo:
+    uses:
+      - form:
+        - bar
+`, error: "form must be a string, not a sequence"},
+		{definition: `personas:
+  foo:
+    uses:
+      - form: bar
+        externalSystem: baz
+`, error: "A use may have either a form or an external system"},
+		{definition: `personas:
+  foo:
+    uses:
+      - description: bar
+`, error: "Must use either a form or an external system"},
+		{definition: `personas:
+  foo:
+    uses:
+      - description:
+          - bar
+`, error: "description must be a string, not a sequence"},
+	})
 }
 
 func TestExternalSystem(t *testing.T) {
