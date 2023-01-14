@@ -31,7 +31,7 @@ func toString(node *yaml.Node, field string) (string, *Issue) {
 	if node.Kind == yaml.ScalarNode {
 		return node.Value, nil
 	}
-	return "", NeedScalarError(field, node)
+	return "", NeedTypeError(field, node, "string")
 
 }
 

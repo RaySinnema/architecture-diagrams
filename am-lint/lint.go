@@ -20,10 +20,7 @@ func LintText(text string) (*ArchitectureModel, []Issue) {
 
 func lint(definition string, fileName string) (model *ArchitectureModel, issues []Issue) {
 	var node yaml.Node
-	err := yaml.Unmarshal([]byte(definition), &node)
-	if err != nil {
-		return nil, invalidYaml()
-	}
+	_ = yaml.Unmarshal([]byte(definition), &node)
 	if !node.IsZero() {
 		if node.Kind != yaml.DocumentNode || node.Content[0].Kind != yaml.MappingNode {
 			return nil, invalidYaml()
@@ -33,11 +30,7 @@ func lint(definition string, fileName string) (model *ArchitectureModel, issues 
 
 	model = &ArchitectureModel{}
 	issues = make([]Issue, 0)
-	children, issue := toMap(&node)
-	if issue != nil {
-		issues = append(issues, *issue)
-		return
-	}
+	children, _ := toMap(&node)
 	for tag, child := range children {
 		reader, exists := readers[tag]
 		if exists {

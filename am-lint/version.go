@@ -41,7 +41,7 @@ func (_ VersionReader) read(node *yaml.Node, _ string, model *ArchitectureModel)
 		}
 		if minor == maxMinorVersion {
 			if len(parts) > 2 {
-				patch, _ := strconv.Atoi(parts[1])
+				patch, _ := strconv.Atoi(parts[2])
 				if patch > maxPatchVersion {
 					return []Issue{*NodeError(fmt.Sprintf("Undefined version: %s", version), node)}
 				}

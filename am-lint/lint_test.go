@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -32,6 +31,40 @@ func hasIssue(issues []Issue, test func(issue Issue) bool) bool {
 func hasError(message string) func(issue Issue) bool {
 	return func(issue Issue) bool {
 		return issue.Level == Error && strings.Contains(issue.Message, message)
+	}
+}
+
+func TestUnknownTopLevelElement(t *testing.T) {
+	yamlWithUnknownTopLevelElement := `ape: bear`
+
+	_, issues := LintText(yamlWithUnknownTopLevelElement)
+
+	if !hasIssue(issues, hasWarning("")) {
+		t.Errorf("No warning about unknown top-level element")
+	}
+}
+
+func hasWarning(message string) func(issue Issue) bool {
+	return func(issue Issue) bool {
+		return issue.Level == Warning && strings.Contains(issue.Message, message)
+	}
+}
+
+func TestUnknownFile(t *testing.T) {
+	fileName := "a-system-named-foo.yaml"
+	if err := os.WriteFile(fileName, []byte(`version: 1.0`), 0200); err != nil {
+		t.Errorf("Failed to create test file")
+	}
+	defer func() {
+		if err := os.Remove(fileName); err != nil {
+			t.Errorf("Failed to delete test file")
+		}
+	}()
+
+	_, issues := LintFile(fileName)
+
+	if len(issues) == 0 {
+		t.Errorf("No error when unable to read file")
 	}
 }
 
@@ -74,16 +107,37 @@ func TestIncorrectVersion(t *testing.T) {
 	}
 }
 
-func TestFutureVersion(t *testing.T) {
-	yamlWithFutureVersion := `version: 3.14`
+func TestIncorrectVersionStructure(t *testing.T) {
+	yamlWithIncorrectVersionStructure := `version:
+  ape: bear
+`
 
-	model, issues := LintText(yamlWithFutureVersion)
+	model, issues := LintText(yamlWithIncorrectVersionStructure)
 
-	if !hasIssue(issues, hasError("Undefined version")) {
-		t.Errorf("Accepts future version")
+	if !hasIssue(issues, hasError("version must be a string, not a map")) {
+		t.Errorf("Missing error")
 	}
 	if model.Version != "" {
 		t.Errorf("Model has version: '%v'", model.Version)
+	}
+}
+
+func TestFutureVersion(t *testing.T) {
+	yamlsWithFutureVersion := []string{
+		`version: 3.14`,
+		`version: 1.2`,
+		`version: 1.0.1`,
+	}
+
+	for _, yamlWithFutureVersion := range yamlsWithFutureVersion {
+		model, issues := LintText(yamlWithFutureVersion)
+
+		if !hasIssue(issues, hasError("Undefined version")) {
+			t.Errorf("Accepts future version")
+		}
+		if model.Version != "" {
+			t.Errorf("Model has version: '%v'", model.Version)
+		}
 	}
 }
 
@@ -135,6 +189,28 @@ func TestNonStringSystem(t *testing.T) {
 
 	if model.System.Name != "3.14" {
 		t.Errorf("Model has system: '%v'", model.System.Name)
+	}
+}
+
+func TestInvalidSystemStructure(t *testing.T) {
+	yamlWithFutureVersion := `system: foo`
+
+	_, issues := LintText(yamlWithFutureVersion)
+
+	if !hasIssue(issues, hasError("Expected a map")) {
+		t.Errorf("No error on invalid system structure")
+	}
+}
+
+func TestInvalidSystemNameStructure(t *testing.T) {
+	yamlWithFutureVersion := `system:
+  name:
+    bar: baz`
+
+	_, issues := LintText(yamlWithFutureVersion)
+
+	if !hasIssue(issues, hasError("name must be a string")) {
+		t.Errorf("No error on invalid system name structure")
 	}
 }
 
@@ -211,12 +287,7 @@ func TestExternalSystem(t *testing.T) {
 
 `
 
-	model, issues := LintText(yamlWithExternalSystems)
-
-	if model == nil {
-		t.Fatalf("Invalid YAML: %v", issues)
-	}
-	fmt.Printf("%+v\n", *model)
+	model, _ := LintText(yamlWithExternalSystems)
 
 	if len(model.ExternalSystems) != 2 {
 		t.Fatalf("Incorrect number of external systems: %v", len(model.ExternalSystems))

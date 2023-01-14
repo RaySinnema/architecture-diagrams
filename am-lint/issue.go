@@ -27,8 +27,8 @@ func NodeError(message string, node *yaml.Node) *Issue {
 	return &Issue{Level: Error, Message: message, Line: node.Line, Column: node.Column}
 }
 
-func NeedScalarError(field string, node *yaml.Node) *Issue {
-	return NodeError(fmt.Sprintf("%v must be a scalar, not a %v", field, kindToString(node.Kind)), node)
+func NeedTypeError(field string, node *yaml.Node, expectedType string) *Issue {
+	return NodeError(fmt.Sprintf("%v must be a %v, not a %v", field, expectedType, kindToString(node.Kind)), node)
 }
 
 func kindToString(kind yaml.Kind) string {
