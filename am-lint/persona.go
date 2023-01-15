@@ -7,30 +7,33 @@ import (
 )
 
 type Used struct {
-	Description        string
-	ExternalSystemName string `yaml:"externalSystem,omitempty"`
-	FormName           string `yaml:"form,omitempty"`
+	node             *yaml.Node
+	Description      string
+	ExternalSystemId string `yaml:"externalSystem,omitempty"`
+	ExternalSystem   *ExternalSystem
+	FormId           string `yaml:"form,omitempty"`
 }
 
 func (u *Used) read(node *yaml.Node, issues []Issue) []Issue {
+	u.node = node
 	fields, issue := toMap(node)
 	if issue != nil {
 		return append(issues, *issue)
 	}
-	externalSystemName, foundExternalSystem, issue := stringFieldOf(fields, "externalSystem")
+	externalSystemId, foundExternalSystem, issue := stringFieldOf(fields, "externalSystem")
 	if issue != nil {
 		issues = append(issues, *issue)
 	}
-	formName, foundForm, issue := stringFieldOf(fields, "form")
+	formId, foundForm, issue := stringFieldOf(fields, "form")
 	if issue != nil {
 		issues = append(issues, *issue)
 	}
 	if foundExternalSystem && foundForm {
 		issues = append(issues, *NodeError("A use may have either a form or an external system. Split the use into two to have let the persona use both.", node))
 	} else if foundExternalSystem {
-		u.ExternalSystemName = externalSystemName
+		u.ExternalSystemId = externalSystemId
 	} else if foundForm {
-		u.FormName = formName
+		u.FormId = formId
 	} else {
 		issues = append(issues, *NodeError("Must use either a form or an external system", node))
 	}
@@ -41,6 +44,13 @@ func (u *Used) read(node *yaml.Node, issues []Issue) []Issue {
 		u.Description = description
 	}
 	return issues
+}
+
+func (u *Used) Used() *ExternalSystem {
+	if u.ExternalSystem != nil {
+		return u.ExternalSystem
+	}
+	return nil
 }
 
 type Persona struct {
@@ -105,5 +115,33 @@ func (p PersonaReader) read(node *yaml.Node, _ string, model *ArchitectureModel)
 		return personas[i].Name < personas[j].Name
 	})
 	model.Personas = personas
+	return issues
+}
+
+type PersonaCollector struct {
+}
+
+func (c PersonaCollector) connect(model *ArchitectureModel) []Issue {
+	issues := make([]Issue, 0)
+	for _, persona := range model.Personas {
+		for _, use := range persona.Uses {
+			issues = append(issues, c.connectUsed(use, model)...)
+		}
+	}
+	return issues
+}
+
+func (c PersonaCollector) connectUsed(used *Used, model *ArchitectureModel) []Issue {
+	issues := make([]Issue, 0)
+	if used.ExternalSystemId != "" {
+		for _, candidate := range model.ExternalSystems {
+			if candidate.Id == used.ExternalSystemId {
+				used.ExternalSystem = candidate
+			}
+		}
+		if used.ExternalSystem == nil {
+			issues = append(issues, *NodeError(fmt.Sprintf("Unknown external system %v", used.ExternalSystemId), used.node))
+		}
+	}
 	return issues
 }

@@ -312,6 +312,27 @@ func TestInvalidPersonas(t *testing.T) {
 	})
 }
 
+func TestPersonaUsesExternalSystem(t *testing.T) {
+	definition := `personas:
+  ape:
+    uses:
+      - externalSystem: bear
+
+externalSystems:
+  bear:
+    description: foo
+`
+
+	model, issues := LintText(definition)
+
+	if len(issues) > 0 {
+		t.Errorf("Got issues: %+v", issues)
+	}
+	if model.Personas[0].Uses[0].Used() != model.ExternalSystems[0] {
+		t.Errorf("Persona use isn't linked up: %+v", *model)
+	}
+}
+
 func TestExternalSystem(t *testing.T) {
 	yamlWithExternalSystems := `externalSystems:
   broker:

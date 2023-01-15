@@ -82,13 +82,13 @@ func (c ExternalSystemConnector) connect(model *ArchitectureModel) []Issue {
 	issues := make([]Issue, 0)
 	for _, externalSystem := range model.ExternalSystems {
 		for _, call := range externalSystem.Calls {
-			issues = append(issues, connect(call, model)...)
+			issues = append(issues, c.connectCall(call, model)...)
 		}
 	}
 	return issues
 }
 
-func connect(call *Call, model *ArchitectureModel) []Issue {
+func (c ExternalSystemConnector) connectCall(call *Call, model *ArchitectureModel) []Issue {
 	issues := make([]Issue, 0)
 	if call.ExternalSystemId != "" {
 		for _, candidate := range model.ExternalSystems {

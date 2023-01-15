@@ -13,7 +13,10 @@ var readers = map[string]ModelPartReader{
 	"externalSystems": ExternalSystemReader{},
 }
 
-var connectors = []Connector{ExternalSystemConnector{}}
+var connectors = []Connector{
+	PersonaCollector{},
+	ExternalSystemConnector{},
+}
 
 func LintText(text string) (*ArchitectureModel, []Issue) {
 	model, issues := lint(text, "")
