@@ -13,6 +13,8 @@ var readers = map[string]ModelPartReader{
 	"externalSystems": ExternalSystemReader{},
 }
 
+var connectors = []Connector{ExternalSystemConnector{}}
+
 func LintText(text string) (*ArchitectureModel, []Issue) {
 	model, issues := lint(text, "")
 	return model, issues
@@ -43,6 +45,9 @@ func lint(definition string, fileName string) (model *ArchitectureModel, issues 
 		if _, processed := children[tag]; !processed {
 			issues = append(issues, reader.read(nil, fileName, model)...)
 		}
+	}
+	for _, connector := range connectors {
+		issues = append(issues, connector.connect(model)...)
 	}
 	return
 }

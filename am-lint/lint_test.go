@@ -400,3 +400,19 @@ func TestInvalidExternalSystems(t *testing.T) {
 `, error: "Invalid dataFlow: must be one of 'send', 'receive', or 'bidirectional'"},
 	})
 }
+
+func TestExternalSystemCallsExternalSystem(t *testing.T) {
+	definition := `externalSystems:
+  ape:
+    calls:
+      - externalSystem: bear
+  bear:
+    description: foo
+`
+
+	model, _ := LintText(definition)
+
+	if model.ExternalSystems[0].Calls[0].Callee() != model.ExternalSystems[1] {
+		t.Errorf("Callee isn't linked up: %+v", *model)
+	}
+}

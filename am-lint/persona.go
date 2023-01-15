@@ -44,12 +44,22 @@ func (u *Used) read(node *yaml.Node, issues []Issue) []Issue {
 }
 
 type Persona struct {
+	node *yaml.Node
+	Id   string
 	Name string
-	Uses []Used
+	Uses []*Used
+}
+
+func (p *Persona) setNode(node *yaml.Node) {
+	p.node = node
 }
 
 func (p *Persona) setName(name string) {
 	p.Name = name
+}
+
+func (p *Persona) setId(id string) {
+	p.Id = id
 }
 
 func (p *Persona) read(id string, node *yaml.Node, issues []Issue) []Issue {
@@ -63,11 +73,11 @@ func (p *Persona) read(id string, node *yaml.Node, issues []Issue) []Issue {
 		return append(issues, *NodeError(fmt.Sprintf(
 			"Invalid persona '%v': must use at least either one form or one external system", id), node))
 	}
-	uses := make([]Used, 0)
+	uses := make([]*Used, 0)
 	for _, useNode := range useNodes {
 		use := Used{}
 		issues = use.read(useNode, issues)
-		uses = append(uses, use)
+		uses = append(uses, &use)
 	}
 	p.Uses = uses
 	return issues
@@ -85,11 +95,11 @@ func (p PersonaReader) read(node *yaml.Node, _ string, model *ArchitectureModel)
 		return []Issue{*issue}
 	}
 	issues := make([]Issue, 0)
-	personas := make([]Persona, 0)
+	personas := make([]*Persona, 0)
 	for id, personaNode := range personasById {
 		persona := Persona{}
 		issues = persona.read(id, personaNode, issues)
-		personas = append(personas, persona)
+		personas = append(personas, &persona)
 	}
 	sort.Slice(personas, func(i, j int) bool {
 		return personas[i].Name < personas[j].Name

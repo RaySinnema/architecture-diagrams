@@ -6,10 +6,12 @@ import (
 )
 
 type Call struct {
-	Description        string
-	ExternalSystemName string `yaml:"externalSystem,omitempty"`
-	ServiceName        string `yaml:"service,omitempty"`
-	DataFlow           string
+	node             *yaml.Node
+	Description      string
+	ExternalSystemId string `yaml:"externalSystem,omitempty"`
+	ServiceId        string `yaml:"service,omitempty"`
+	DataFlow         string
+	ExternalSystem   *ExternalSystem
 }
 
 const serviceField = "service"
@@ -17,6 +19,7 @@ const systemField = "externalSystem"
 const dataFlowField = "dataFlow"
 
 func (c *Call) read(node *yaml.Node, issues []Issue) []Issue {
+	c.node = node
 	fields, issue := toMap(node)
 	if issue != nil {
 		return append(issues, *issue)
@@ -32,9 +35,9 @@ func (c *Call) read(node *yaml.Node, issues []Issue) []Issue {
 	if serviceFound && systemFound {
 		issues = append(issues, *NodeError(fmt.Sprintf("A call may be to either a %v or to an %v. Split the call into two to call both.", serviceField, systemField), node))
 	} else if serviceFound {
-		c.ServiceName = serviceName
+		c.ServiceId = serviceName
 	} else if systemFound {
-		c.ExternalSystemName = systemName
+		c.ExternalSystemId = systemName
 	} else {
 		issues = append(issues, *NodeError(fmt.Sprintf("One of %v or %v is required", serviceField, systemField), node))
 	}
@@ -74,12 +77,9 @@ func stringsIn(values []string) string {
 	return result
 }
 
-func (c *Call) Callee() string {
-	if c.ServiceName != "" {
-		return c.ServiceName
+func (c *Call) Callee() *ExternalSystem {
+	if c.ExternalSystem != nil {
+		return c.ExternalSystem
 	}
-	if c.ExternalSystemName != "" {
-		return c.ExternalSystemName
-	}
-	return "???"
+	return nil
 }
