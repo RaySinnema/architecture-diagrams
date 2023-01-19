@@ -128,13 +128,13 @@ func TestIncorrectVersionStructure(t *testing.T) {
 }
 
 func TestFutureVersion(t *testing.T) {
-	yamlsWithFutureVersion := []string{
+	definitions := []string{
 		`version: 3.14`,
 		`version: 1.2`,
 		`version: 1.0.1`,
 	}
 
-	for _, yamlWithFutureVersion := range yamlsWithFutureVersion {
+	for _, yamlWithFutureVersion := range definitions {
 		model, issues := LintText(yamlWithFutureVersion)
 
 		if !hasIssue(issues, hasError("Undefined version")) {
@@ -435,5 +435,50 @@ func TestExternalSystemCallsExternalSystem(t *testing.T) {
 
 	if model.ExternalSystems[0].Calls[0].Callee() != model.ExternalSystems[1] {
 		t.Errorf("Callee isn't linked up: %+v", *model)
+	}
+}
+
+func TestService(t *testing.T) {
+	definition := `services:
+  form:
+    name: Privacy Form
+    technologies:
+      - java
+      - spring
+    forms:
+      - privacy
+    calls:
+      - service: api
+        description: Calls
+        dataFlow: send
+        technologies: jsonOverHttp
+  api:
+    name: API
+    dataStores:
+      - queue: events
+        description: Writes domain events
+        dataFlow: send
+`
+
+	model, issues := LintText(definition)
+
+	if model == nil {
+		t.Fatalf("Invalid model: %+v", issues)
+	}
+	if len(model.Services) != 2 {
+		t.Fatalf("Incorrect number of services: %v", len(model.Services))
+	}
+	if model.Services[0].Name != "API" {
+		t.Fatalf("Services not sorted: incorrect name for 1st service: %v", model.Services[0].Name)
+	}
+	if len(model.Services[0].DataStores) == 1 {
+		if model.Services[0].DataStores[0].QueueId != "events" {
+			t.Errorf("Invalid data store: %+v", model.Services[0].DataStores[0])
+		}
+	} else {
+		t.Errorf("Invalid # data stores: %+v", model.Services[0])
+	}
+	if len(model.Services[1].Forms) != 1 {
+		t.Errorf("Invalid # forms: %+v", model.Services[1])
 	}
 }

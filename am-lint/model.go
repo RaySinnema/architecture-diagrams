@@ -5,4 +5,5 @@ type ArchitectureModel struct {
 	System          System
 	Personas        []*Persona
 	ExternalSystems []*ExternalSystem
+	Services        []*Service
 }

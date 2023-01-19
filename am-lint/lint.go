@@ -11,6 +11,7 @@ var readers = map[string]ModelPartReader{
 	"system":          SystemReader{},
 	"personas":        PersonaReader{},
 	"externalSystems": ExternalSystemReader{},
+	"services":        ServiceReader{},
 }
 
 var connectors = []Connector{
@@ -25,10 +26,13 @@ func LintText(text string) (*ArchitectureModel, []Issue) {
 
 func lint(definition string, fileName string) (model *ArchitectureModel, issues []Issue) {
 	var node yaml.Node
-	_ = yaml.Unmarshal([]byte(definition), &node)
+	err := yaml.Unmarshal([]byte(definition), &node)
+	if err != nil {
+		return nil, invalidYaml(err.Error())
+	}
 	if !node.IsZero() {
 		if node.Kind != yaml.DocumentNode || node.Content[0].Kind != yaml.MappingNode {
-			return nil, invalidYaml()
+			return nil, invalidYaml("must be a map")
 		}
 		node = *node.Content[0]
 	}
@@ -55,8 +59,8 @@ func lint(definition string, fileName string) (model *ArchitectureModel, issues 
 	return
 }
 
-func invalidYaml() []Issue {
-	return []Issue{*FileError("Invalid YAML")}
+func invalidYaml(message string) []Issue {
+	return []Issue{*FileError(fmt.Sprintf("Invalid YAML: %v", message))}
 }
 
 func LintFile(fileName string) (*ArchitectureModel, []Issue) {
