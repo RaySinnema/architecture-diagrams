@@ -12,6 +12,10 @@ type DataStoreUse struct {
 	DataFlow    string
 }
 
+func (d *DataStoreUse) setDirection(direction string) {
+	d.DataFlow = direction
+}
+
 func (d *DataStoreUse) read(node *yaml.Node, issues []Issue) []Issue {
 	fields, issue := toMap(node)
 	if issue != nil {
@@ -35,15 +39,24 @@ func (d *DataStoreUse) read(node *yaml.Node, issues []Issue) []Issue {
 	} else if found {
 		d.Description = description
 	}
+	if d.QueueId == "" && d.DatabaseId == "" {
+		issues = append(issues, *NodeError("A dataStore must have either a database or a queue", node))
+	}
+	issue = setDataFlow(fields, d)
+	if issue != nil {
+		issues = append(issues, *issue)
+	}
 	return issues
 }
 
 type Service struct {
-	node       *yaml.Node
-	Id         string
-	Name       string
-	DataStores []*DataStoreUse
-	Forms      []string
+	node           *yaml.Node
+	Id             string
+	Name           string
+	DataStores     []*DataStoreUse
+	Forms          []string
+	TechnologyIds  []string
+	TechnologiesId string
 }
 
 func (s *Service) setId(id string) {

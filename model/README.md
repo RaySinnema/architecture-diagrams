@@ -183,7 +183,7 @@ services:
     dataStores:
       - queue: events
         description: Writes domain events
-        flow: send
+        dataFlow: send
   form:
     name: Privacy Form
     technologies: serverWithUi

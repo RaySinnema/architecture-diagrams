@@ -16,7 +16,10 @@ type Call struct {
 
 const serviceField = "service"
 const systemField = "externalSystem"
-const dataFlowField = "dataFlow"
+
+func (c *Call) setDirection(direction string) {
+	c.DataFlow = direction
+}
 
 func (c *Call) read(node *yaml.Node, issues []Issue) []Issue {
 	c.node = node
@@ -47,18 +50,9 @@ func (c *Call) read(node *yaml.Node, issues []Issue) []Issue {
 	} else if found {
 		c.Description = description
 	}
-	dataFlow, found, issue := stringFieldOf(fields, dataFlowField)
+	issue = setDataFlow(fields, c)
 	if issue != nil {
 		issues = append(issues, *issue)
-	} else if found {
-		allowed := []string{"send", "receive", "bidirectional"}
-		if hasDifferentValueThan(dataFlow, allowed) {
-			issues = append(issues, *NodeError(fmt.Sprintf("Invalid %v: must be one of %v", dataFlowField, stringsIn(allowed)), fields[dataFlowField]))
-		} else {
-			c.DataFlow = dataFlow
-		}
-	} else {
-		c.DataFlow = "bidirectional"
 	}
 	return issues
 }

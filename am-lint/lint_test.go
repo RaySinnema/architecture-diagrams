@@ -443,8 +443,8 @@ func TestService(t *testing.T) {
   form:
     name: Privacy Form
     technologies:
-      - java
       - spring
+      - java
     forms:
       - privacy
     calls:
@@ -468,17 +468,83 @@ func TestService(t *testing.T) {
 	if len(model.Services) != 2 {
 		t.Fatalf("Incorrect number of services: %v", len(model.Services))
 	}
-	if model.Services[0].Name != "API" {
-		t.Fatalf("Services not sorted: incorrect name for 1st service: %v", model.Services[0].Name)
+
+	api := model.Services[0]
+	if api.Name != "API" {
+		t.Fatalf("Services not sorted: incorrect name for 1st service: %v", api.Name)
 	}
-	if len(model.Services[0].DataStores) == 1 {
-		if model.Services[0].DataStores[0].QueueId != "events" {
-			t.Errorf("Invalid data store: %+v", model.Services[0].DataStores[0])
+	if len(api.DataStores) == 1 {
+		if api.DataStores[0].QueueId != "events" {
+			t.Errorf("Invalid data store: %+v", api.DataStores[0])
 		}
 	} else {
-		t.Errorf("Invalid # data stores: %+v", model.Services[0])
+		t.Errorf("Invalid # data stores: %+v", api)
 	}
-	if len(model.Services[1].Forms) != 1 {
-		t.Errorf("Invalid # forms: %+v", model.Services[1])
+
+	form := model.Services[1]
+	if len(form.Forms) != 1 {
+		t.Fatalf("Invalid # forms: %+v", form)
 	}
+	// TODO: Implement
+	//if !reflect.DeepEqual(form.TechnologyIds, []string{"java", "spring"}) {
+	//	t.Errorf("Invalid form technologies: %+v", form.TechnologyIds)
+	//}
+}
+
+func TestInvalidService(t *testing.T) {
+	assertErrorsForInvalidDefinitions(t, []InvalidDefinition{
+		{definition: `services:
+  - foo
+  - bar
+`, error: "Expected a map"},
+		{definition: `services:
+  foo:
+    dataStores: bar
+`, error: "dataStores must be a sequence"},
+		{definition: `services:
+  foo:
+    dataStores:
+      - bar
+`, error: "Expected a map"},
+		{definition: `services:
+  foo:
+    dataStores:
+      - queue:
+          - bar
+`, error: "queue must be a string"},
+		{definition: `services:
+  foo:
+    dataStores:
+      - database:
+          - bar
+`, error: "database must be a string"},
+		{definition: `services:
+  foo:
+    dataStores:
+      - description: bar
+`, error: "A dataStore must have either a database or a queue"},
+		{definition: `services:
+  foo:
+    dataStores:
+      - database: bar
+        description:
+          - baz
+`, error: "description must be a string"},
+		{definition: `services:
+  foo:
+    dataStores:
+      - database: bar
+        dataFlow: baz
+`, error: "Invalid dataFlow: must be one of 'send', 'receive', or 'bidirectional'"},
+		{definition: `services:
+  foo:
+    forms: bar
+`, error: "forms must be a sequence"},
+		{definition: `services:
+  foo:
+    forms:
+      - bar:
+        - baz
+`, error: "form must be a string"},
+	})
 }
