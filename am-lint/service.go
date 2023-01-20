@@ -57,6 +57,15 @@ type Service struct {
 	Forms          []string
 	TechnologyIds  []string
 	TechnologiesId string
+	Calls          []*Call
+}
+
+func (s *Service) setTechnologyBundleId(technologyBundle string) {
+	s.TechnologiesId = technologyBundle
+}
+
+func (s *Service) setTechnologyIds(technologies []string) {
+	s.TechnologyIds = technologies
 }
 
 func (s *Service) setId(id string) {
@@ -99,6 +108,7 @@ func (s *Service) read(id string, node *yaml.Node, issues []Issue) []Issue {
 		}
 	}
 	s.Forms = forms
+	issues = append(issues, setTechnologies(fields, s)...)
 	return issues
 }
 

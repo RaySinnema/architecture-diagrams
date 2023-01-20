@@ -33,16 +33,12 @@ func NeedTypeError(field string, node *yaml.Node, expectedType string) *Issue {
 
 func kindToString(kind yaml.Kind) string {
 	switch kind {
-	case yaml.DocumentNode:
-		return "document"
 	case yaml.MappingNode:
 		return "map"
 	case yaml.SequenceNode:
 		return "sequence"
 	case yaml.ScalarNode:
 		return "scalar"
-	case yaml.AliasNode:
-		return "alias"
 	default:
 		return strconv.FormatInt(int64(kind), 10)
 	}

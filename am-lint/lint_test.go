@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -458,6 +459,7 @@ func TestService(t *testing.T) {
       - queue: events
         description: Writes domain events
         dataFlow: send
+    technologies: server
 `
 
 	model, issues := LintText(definition)
@@ -480,15 +482,17 @@ func TestService(t *testing.T) {
 	} else {
 		t.Errorf("Invalid # data stores: %+v", api)
 	}
+	if api.TechnologiesId != "server" {
+		t.Errorf("Invalid technologies: %+v", api.TechnologiesId)
+	}
 
 	form := model.Services[1]
 	if len(form.Forms) != 1 {
 		t.Fatalf("Invalid # forms: %+v", form)
 	}
-	// TODO: Implement
-	//if !reflect.DeepEqual(form.TechnologyIds, []string{"java", "spring"}) {
-	//	t.Errorf("Invalid form technologies: %+v", form.TechnologyIds)
-	//}
+	if !reflect.DeepEqual(form.TechnologyIds, []string{"java", "spring"}) {
+		t.Errorf("Invalid form technologies: %+v", form.TechnologyIds)
+	}
 }
 
 func TestInvalidService(t *testing.T) {
@@ -536,6 +540,17 @@ func TestInvalidService(t *testing.T) {
       - database: bar
         dataFlow: baz
 `, error: "Invalid dataFlow: must be one of 'send', 'receive', or 'bidirectional'"},
+		{definition: `services:
+  foo:
+    technologies:
+      bar: baz
+`, error: "technologies must be a sequence"},
+		{definition: `services:
+  foo:
+    technologies:
+      - bar:
+          - baz
+`, error: "technology must be a string"},
 		{definition: `services:
   foo:
     forms: bar
