@@ -9,11 +9,11 @@ type DataStoreUse struct {
 	QueueId     string `yaml:"queue,omitempty"`
 	DatabaseId  string `yaml:"database,omitempty"`
 	Description string
-	DataFlow    string
+	DataFlow    DataFlow
 }
 
-func (d *DataStoreUse) setDirection(direction string) {
-	d.DataFlow = direction
+func (d *DataStoreUse) setDataFlow(dataFlow DataFlow) {
+	d.DataFlow = dataFlow
 }
 
 func (d *DataStoreUse) read(node *yaml.Node, issues []Issue) []Issue {

@@ -10,15 +10,15 @@ type Call struct {
 	Description      string
 	ExternalSystemId string `yaml:"externalSystem,omitempty"`
 	ServiceId        string `yaml:"service,omitempty"`
-	DataFlow         string
+	DataFlow         DataFlow
 	ExternalSystem   *ExternalSystem
 }
 
 const serviceField = "service"
 const systemField = "externalSystem"
 
-func (c *Call) setDirection(direction string) {
-	c.DataFlow = direction
+func (c *Call) setDataFlow(dataFlow DataFlow) {
+	c.DataFlow = dataFlow
 }
 
 func (c *Call) read(node *yaml.Node, issues []Issue) []Issue {
