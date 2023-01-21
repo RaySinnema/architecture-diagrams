@@ -14,12 +14,24 @@ type Used struct {
 	FormId           string `yaml:"form,omitempty"`
 }
 
-func (u *Used) read(node *yaml.Node, issues []Issue) []Issue {
+func (u *Used) setDescription(description string) {
+	u.Description = description
+}
+
+func (u *Used) read(node *yaml.Node) []Issue {
 	u.node = node
 	fields, issue := toMap(node)
 	if issue != nil {
-		return append(issues, *issue)
+		return []Issue{*issue}
 	}
+	issues := make([]Issue, 0)
+	issues = append(issues, u.readUsed(node, issue, fields)...)
+	issues = append(issues, setDescription(fields, u)...)
+	return issues
+}
+
+func (u *Used) readUsed(node *yaml.Node, issue *Issue, fields map[string]*yaml.Node) []Issue {
+	issues := make([]Issue, 0)
 	externalSystemId, foundExternalSystem, issue := stringFieldOf(fields, "externalSystem")
 	if issue != nil {
 		issues = append(issues, *issue)
@@ -36,12 +48,6 @@ func (u *Used) read(node *yaml.Node, issues []Issue) []Issue {
 		u.FormId = formId
 	} else {
 		issues = append(issues, *NodeError("Must use either a form or an external system", node))
-	}
-	description, found, issue := stringFieldOf(fields, "description")
-	if issue != nil {
-		issues = append(issues, *issue)
-	} else if found {
-		u.Description = description
 	}
 	return issues
 }
@@ -72,9 +78,9 @@ func (p *Persona) setId(id string) {
 	p.Id = id
 }
 
-func (p *Persona) read(id string, node *yaml.Node, issues []Issue) []Issue {
+func (p *Persona) read(id string, node *yaml.Node) []Issue {
 	var fields map[string]*yaml.Node
-	fields, issues = namedObject(id, node, p, issues)
+	fields, issues := namedObject(id, node, p)
 	useNodes, found, issue := sequenceFieldOf(fields, "uses")
 	if issue != nil {
 		return append(issues, *issue)
@@ -86,7 +92,7 @@ func (p *Persona) read(id string, node *yaml.Node, issues []Issue) []Issue {
 	uses := make([]*Used, 0)
 	for _, useNode := range useNodes {
 		use := Used{}
-		issues = use.read(useNode, issues)
+		issues = append(issues, use.read(useNode)...)
 		uses = append(uses, &use)
 	}
 	p.Uses = uses
@@ -108,8 +114,8 @@ func (p PersonaReader) read(node *yaml.Node, _ string, model *ArchitectureModel)
 	personas := make([]*Persona, 0)
 	for id, personaNode := range personasById {
 		persona := Persona{}
-		issues = persona.read(id, personaNode, issues)
 		personas = append(personas, &persona)
+		issues = append(issues, persona.read(id, personaNode)...)
 	}
 	sort.Slice(personas, func(i, j int) bool {
 		return personas[i].Name < personas[j].Name

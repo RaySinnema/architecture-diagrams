@@ -14,6 +14,10 @@ type Call struct {
 	ExternalSystem   *ExternalSystem
 }
 
+func (c *Call) setDescription(description string) {
+	c.Description = description
+}
+
 const serviceField = "service"
 const systemField = "externalSystem"
 
@@ -21,12 +25,21 @@ func (c *Call) setDataFlow(dataFlow DataFlow) {
 	c.DataFlow = dataFlow
 }
 
-func (c *Call) read(node *yaml.Node, issues []Issue) []Issue {
+func (c *Call) read(node *yaml.Node) []Issue {
 	c.node = node
 	fields, issue := toMap(node)
 	if issue != nil {
-		return append(issues, *issue)
+		return []Issue{*issue}
 	}
+	issues := make([]Issue, 0)
+	issues = append(issues, c.readCallee(node, issue, fields)...)
+	issues = append(issues, setDescription(fields, c)...)
+	issues = append(issues, setDataFlow(fields, c)...)
+	return issues
+}
+
+func (c *Call) readCallee(node *yaml.Node, issue *Issue, fields map[string]*yaml.Node) []Issue {
+	issues := make([]Issue, 0)
 	serviceName, serviceFound, issue := stringFieldOf(fields, serviceField)
 	if issue != nil {
 		issues = append(issues, *issue)
@@ -43,16 +56,6 @@ func (c *Call) read(node *yaml.Node, issues []Issue) []Issue {
 		c.ExternalSystemId = systemName
 	} else {
 		issues = append(issues, *NodeError(fmt.Sprintf("One of %v or %v is required", serviceField, systemField), node))
-	}
-	description, found, issue := stringFieldOf(fields, "description")
-	if issue != nil {
-		issues = append(issues, *issue)
-	} else if found {
-		c.Description = description
-	}
-	issue = setDataFlow(fields, c)
-	if issue != nil {
-		issues = append(issues, *issue)
 	}
 	return issues
 }

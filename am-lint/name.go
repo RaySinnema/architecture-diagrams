@@ -13,22 +13,23 @@ type Nameable interface {
 	setName(name string)
 }
 
-func namedObject(id string, node *yaml.Node, nameable Nameable, issues []Issue) (map[string]*yaml.Node, []Issue) {
+func namedObject(id string, node *yaml.Node, nameable Nameable) (map[string]*yaml.Node, []Issue) {
 	nameable.setId(id)
 	nameable.setNode(node)
 	fields, issue := toMap(node)
 	if issue != nil {
-		return nil, append(issues, *issue)
+		return nil, []Issue{*issue}
 	}
 	name, found, issue := stringFieldOf(fields, "name")
 	if issue != nil {
-		return nil, append(issues, *issue)
-	} else if found {
+		return nil, []Issue{*issue}
+	}
+	if found {
 		nameable.setName(name)
 	} else {
 		nameable.setName(friendlyNameFrom(id))
 	}
-	return fields, issues
+	return fields, []Issue{}
 }
 
 func friendlyNameFrom(value string) string {

@@ -475,17 +475,24 @@ func TestService(t *testing.T) {
         description: Writes domain events
         dataFlow: send
     technologies: server
-  workflow:
+  subscriptions:
     dataStores:
       - queue: events
         dataFlow: receive
-        technologies: pubsub
+      - database: subscriptions
+    forms:
+      subscriptionsOld:
+        name: Subscriptions
+        state: legacy
 `
 
 	model, issues := LintText(definition)
 
 	if model == nil {
 		t.Fatalf("Invalid model: %+v", issues)
+	}
+	if len(issues) > 0 {
+		t.Errorf("Unexpected issues: %+v", issues)
 	}
 	if len(model.Services) != 3 {
 		t.Fatalf("Incorrect number of services: %v", len(model.Services))
@@ -520,12 +527,15 @@ func TestService(t *testing.T) {
 		t.Errorf("Invalid form state: '%v'", form.State)
 	}
 
-	workflow := model.Services[2]
-	if workflow.Name != "Workflow" {
-		t.Fatalf("Invalid workflow service: '%v'", workflow.Name)
+	subscriptions := model.Services[2]
+	if subscriptions.Name != "Subscriptions" {
+		t.Fatalf("Invalid subscriptions service: '%v'", subscriptions.Name)
 	}
-	if workflow.DataStores[0].DataFlow != Receive {
-		t.Errorf("Invalid workflow queue dataflow: %v", workflow.DataStores[0].DataFlow)
+	if subscriptions.DataStores[0].DataFlow != Receive {
+		t.Errorf("Invalid subscriptions queue dataflow: %v", subscriptions.DataStores[0].DataFlow)
+	}
+	if len(subscriptions.Forms) != 1 {
+		t.Fatalf("Invalid # subscriptions forms: %+v", subscriptions)
 	}
 }
 
@@ -595,6 +605,20 @@ func TestInvalidService(t *testing.T) {
       - bar:
         - baz
 `, error: "form must be a string"},
+		{definition: `services:
+  foo:
+    forms:
+      bar:
+        state:
+          - baz
+`, error: "state must be a string"},
+		{definition: `services:
+  foo:
+    forms:
+      bar:
+        name:
+          - baz
+`, error: "name must be a string"},
 		{definition: `services:
   foo:
     state:

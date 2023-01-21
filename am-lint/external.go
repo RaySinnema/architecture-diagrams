@@ -26,24 +26,37 @@ func (es *ExternalSystem) setName(name string) {
 	es.Name = name
 }
 
-func (es *ExternalSystem) read(id string, node *yaml.Node, issues []Issue) []Issue {
+func (es *ExternalSystem) read(id string, node *yaml.Node) []Issue {
 	var fields map[string]*yaml.Node
-	fields, issues = namedObject(id, node, es, issues)
+	fields, issues := namedObject(id, node, es)
+	issues = append(issues, es.readType(fields)...)
+	issues = append(issues, es.readCalls(fields)...)
+	return issues
+}
+
+func (es *ExternalSystem) readType(fields map[string]*yaml.Node) []Issue {
 	systemType, found, issue := stringFieldOf(fields, "type")
 	if issue != nil {
-		issues = append(issues, *issue)
-	} else if found {
+		return []Issue{*issue}
+	}
+	if found {
 		es.Type = systemType
 	}
+	return []Issue{}
+}
+
+func (es *ExternalSystem) readCalls(fields map[string]*yaml.Node) []Issue {
 	callNodes, found, issue := sequenceFieldOf(fields, "calls")
 	if issue != nil {
-		issues = append(issues, *issue)
-	} else if found {
+		return []Issue{*issue}
+	}
+	issues := make([]Issue, 0)
+	if found {
 		calls := make([]*Call, 0)
 		for _, callNode := range callNodes {
 			call := Call{}
-			issues = call.read(callNode, issues)
 			calls = append(calls, &call)
+			issues = append(issues, call.read(callNode)...)
 		}
 		es.Calls = calls
 	}
@@ -65,8 +78,8 @@ func (e ExternalSystemReader) read(node *yaml.Node, _ string, model *Architectur
 	externalSystems := make([]*ExternalSystem, 0)
 	for id, externalSystemNode := range externalSystemsById {
 		externalSystem := ExternalSystem{}
-		issues = externalSystem.read(id, externalSystemNode, issues)
 		externalSystems = append(externalSystems, &externalSystem)
+		issues = append(issues, externalSystem.read(id, externalSystemNode)...)
 	}
 	sort.Slice(externalSystems, func(i, j int) bool {
 		return externalSystems[i].Name < externalSystems[j].Name

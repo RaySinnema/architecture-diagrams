@@ -22,15 +22,15 @@ const defaultState = "ok"
 
 var allowedStates = []string{defaultState, "emerging", "review", "revision", "legacy", "deprecated"}
 
-func setState(fields map[string]*yaml.Node, e Evolveable) *Issue {
+func setState(fields map[string]*yaml.Node, e Evolveable) []Issue {
 	value, issue := enumFieldOf(fields, stateField, allowedStates, defaultState)
 	if issue != nil {
-		return issue
+		return []Issue{*issue}
 	}
 	for index, state := range allowedStates {
 		if state == value {
 			e.setState(State(index))
 		}
 	}
-	return nil
+	return []Issue{}
 }

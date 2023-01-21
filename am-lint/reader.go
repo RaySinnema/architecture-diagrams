@@ -9,6 +9,19 @@ type ModelPartReader interface {
 	read(definition *yaml.Node, fileName string, model *ArchitectureModel) []Issue
 }
 
+func mapFieldOf(fields map[string]*yaml.Node, field string) (map[string]*yaml.Node, bool, *Issue) {
+	var result map[string]*yaml.Node
+	var issue *Issue
+	node, found := fields[field]
+	if found {
+		result, issue = toMap(node)
+	} else {
+		result = make(map[string]*yaml.Node)
+		issue = nil
+	}
+	return result, found, issue
+}
+
 func toMap(node *yaml.Node) (map[string]*yaml.Node, *Issue) {
 	result := make(map[string]*yaml.Node)
 	if node == nil || node.IsZero() {
@@ -58,16 +71,16 @@ func stringFieldOf(fields map[string]*yaml.Node, field string) (string, bool, *I
 }
 
 func sequenceFieldOf(fields map[string]*yaml.Node, field string) ([]*yaml.Node, bool, *Issue) {
-	result := make([]*yaml.Node, 0)
+	var result []*yaml.Node
+	var issue *Issue
 	node, found := fields[field]
 	if found {
-		result, issue := toSequence(node, field)
-		if issue != nil {
-			return result, false, issue
-		}
-		return result, true, nil
+		result, issue = toSequence(node, field)
+	} else {
+		result = make([]*yaml.Node, 0)
+		issue = nil
 	}
-	return result, false, nil
+	return result, found, issue
 }
 
 func toSequence(node *yaml.Node, field string) ([]*yaml.Node, *Issue) {
