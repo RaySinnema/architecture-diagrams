@@ -443,6 +443,7 @@ func TestService(t *testing.T) {
 	definition := `services:
   form:
     name: Privacy Form
+    state: emerging
     technologies:
       - spring
       - java
@@ -485,6 +486,9 @@ func TestService(t *testing.T) {
 	if api.TechnologiesId != "server" {
 		t.Errorf("Invalid technologies: %+v", api.TechnologiesId)
 	}
+	if api.State != Ok {
+		t.Errorf("Invalid api state: '%v'", api.State)
+	}
 
 	form := model.Services[1]
 	if len(form.Forms) != 1 {
@@ -492,6 +496,9 @@ func TestService(t *testing.T) {
 	}
 	if !reflect.DeepEqual(form.TechnologyIds, []string{"java", "spring"}) {
 		t.Errorf("Invalid form technologies: %+v", form.TechnologyIds)
+	}
+	if form.State != Emerging {
+		t.Errorf("Invalid form state: '%v'", form.State)
 	}
 }
 
@@ -561,5 +568,14 @@ func TestInvalidService(t *testing.T) {
       - bar:
         - baz
 `, error: "form must be a string"},
+		{definition: `services:
+  foo:
+    state:
+      - bar
+`, error: "state must be a string"},
+		{definition: `services:
+  foo:
+    state: weird
+`, error: "Invalid state: must be one of 'ok', 'emerging', 'review', 'revision', 'legacy', or 'deprecated'"},
 	})
 }

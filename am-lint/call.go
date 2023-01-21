@@ -57,20 +57,6 @@ func (c *Call) read(node *yaml.Node, issues []Issue) []Issue {
 	return issues
 }
 
-func stringsIn(values []string) string {
-	result := ""
-	for index, value := range values {
-		if index == 0 {
-			result = fmt.Sprintf("'%v'", value)
-		} else if index == len(values)-1 {
-			result = fmt.Sprintf("%v, or '%v'", result, value)
-		} else {
-			result = fmt.Sprintf("%v, '%v'", result, value)
-		}
-	}
-	return result
-}
-
 func (c *Call) Callee() *ExternalSystem {
 	if c.ExternalSystem != nil {
 		return c.ExternalSystem

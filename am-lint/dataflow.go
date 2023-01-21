@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"gopkg.in/yaml.v3"
 )
 
@@ -10,20 +9,15 @@ type DataFlow interface {
 }
 
 const dataFlowField = "dataFlow"
+const defaultDataFlow = "bidirectional"
+
+var allowedDataFlows = []string{"send", "receive", defaultDataFlow}
 
 func setDataFlow(fields map[string]*yaml.Node, dataFlow DataFlow) *Issue {
-	direction, found, issue := stringFieldOf(fields, dataFlowField)
+	direction, issue := enumFieldOf(fields, dataFlowField, allowedDataFlows, defaultDataFlow)
 	if issue != nil {
 		return issue
 	}
-	if found {
-		allowed := []string{"send", "receive", "bidirectional"}
-		if hasDifferentValueThan(direction, allowed) {
-			return NodeError(fmt.Sprintf("Invalid %v: must be one of %v", dataFlowField, stringsIn(allowed)), fields[dataFlowField])
-		}
-		dataFlow.setDirection(direction)
-	} else {
-		dataFlow.setDirection("bidirectional")
-	}
+	dataFlow.setDirection(direction)
 	return nil
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"gopkg.in/yaml.v3"
 )
 
@@ -74,4 +75,32 @@ func toSequence(node *yaml.Node, field string) ([]*yaml.Node, *Issue) {
 		return node.Content, nil
 	}
 	return []*yaml.Node{}, NeedTypeError(field, node, "sequence")
+}
+
+func stringsIn(values []string) string {
+	result := ""
+	for index, value := range values {
+		if index == 0 {
+			result = fmt.Sprintf("'%v'", value)
+		} else if index == len(values)-1 {
+			result = fmt.Sprintf("%v, or '%v'", result, value)
+		} else {
+			result = fmt.Sprintf("%v, '%v'", result, value)
+		}
+	}
+	return result
+}
+
+func enumFieldOf(fields map[string]*yaml.Node, field string, allowed []string, defaultValue string) (string, *Issue) {
+	value, found, issue := stringFieldOf(fields, field)
+	if issue != nil {
+		return "", issue
+	}
+	if !found {
+		return defaultValue, nil
+	}
+	if hasDifferentValueThan(value, allowed) {
+		return "", NodeError(fmt.Sprintf("Invalid %v: must be one of %v", field, stringsIn(allowed)), fields[field])
+	}
+	return value, nil
 }
