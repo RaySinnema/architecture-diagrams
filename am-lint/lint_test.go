@@ -346,7 +346,6 @@ func TestExternalSystem(t *testing.T) {
       - service: api
         description: Sends SAR / DDR / CID
         dataFlow: send
-
 `
 
 	model, _ := LintText(yamlWithExternalSystems)
@@ -355,7 +354,18 @@ func TestExternalSystem(t *testing.T) {
 		t.Fatalf("Incorrect number of external systems: %v", len(model.ExternalSystems))
 	}
 	if model.ExternalSystems[0].Name != "Local platform" {
-		t.Errorf("External systems not sorted: incorrect name for 1st external system: %v", model.ExternalSystems[0].Name)
+		t.Fatalf("External systems not sorted: incorrect name for 1st external system: %v", model.ExternalSystems[0].Name)
+	}
+	lp := model.ExternalSystems[0]
+	if len(lp.Calls) != 1 {
+		t.Fatalf("# calls: %v", len(lp.Calls))
+	}
+	call := lp.Calls[0]
+	if call.ServiceId != "api" {
+		t.Errorf("Invalid call: '%v'", call.ServiceId)
+	}
+	if call.DataFlow != Send {
+		t.Errorf("Invalid call direction: %v", call.DataFlow)
 	}
 }
 
@@ -434,8 +444,12 @@ func TestExternalSystemCallsExternalSystem(t *testing.T) {
 
 	model, _ := LintText(definition)
 
-	if model.ExternalSystems[0].Calls[0].Callee() != model.ExternalSystems[1] {
+	call := model.ExternalSystems[0].Calls[0]
+	if call.Callee() != model.ExternalSystems[1] {
 		t.Errorf("Callee isn't linked up: %+v", *model)
+	}
+	if call.DataFlow != Bidirectional {
+		t.Errorf("Invalid call direction: %v", call.DataFlow)
 	}
 }
 
@@ -461,6 +475,11 @@ func TestService(t *testing.T) {
         description: Writes domain events
         dataFlow: send
     technologies: server
+  workflow:
+    dataStores:
+      - queue: events
+        dataFlow: receive
+        technologies: pubsub
 `
 
 	model, issues := LintText(definition)
@@ -468,7 +487,7 @@ func TestService(t *testing.T) {
 	if model == nil {
 		t.Fatalf("Invalid model: %+v", issues)
 	}
-	if len(model.Services) != 2 {
+	if len(model.Services) != 3 {
 		t.Fatalf("Incorrect number of services: %v", len(model.Services))
 	}
 
@@ -499,6 +518,14 @@ func TestService(t *testing.T) {
 	}
 	if form.State != Emerging {
 		t.Errorf("Invalid form state: '%v'", form.State)
+	}
+
+	workflow := model.Services[2]
+	if workflow.Name != "Workflow" {
+		t.Fatalf("Invalid workflow service: '%v'", workflow.Name)
+	}
+	if workflow.DataStores[0].DataFlow != Receive {
+		t.Errorf("Invalid workflow queue dataflow: %v", workflow.DataStores[0].DataFlow)
 	}
 }
 
