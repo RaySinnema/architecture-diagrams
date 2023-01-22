@@ -12,6 +12,7 @@ type Used struct {
 	ExternalSystemId string `yaml:"externalSystem,omitempty"`
 	ExternalSystem   *ExternalSystem
 	FormId           string `yaml:"form,omitempty"`
+	Form             *Form
 }
 
 func (u *Used) setDescription(description string) {
@@ -41,13 +42,13 @@ func (u *Used) readUsed(node *yaml.Node, issue *Issue, fields map[string]*yaml.N
 		issues = append(issues, *issue)
 	}
 	if foundExternalSystem && foundForm {
-		issues = append(issues, *NodeError("A use may have either a form or an external system. Split the use into two to have let the persona use both.", node))
+		issues = append(issues, *NodeError("A persona may use either a form or an external system. Split the into two to have let the persona use both.", node))
 	} else if foundExternalSystem {
 		u.ExternalSystemId = externalSystemId
 	} else if foundForm {
 		u.FormId = formId
 	} else {
-		issues = append(issues, *NodeError("Must use either a form or an external system", node))
+		issues = append(issues, *NodeError("A persona must use either a form or an external system", node))
 	}
 	return issues
 }
@@ -80,14 +81,13 @@ func (p *Persona) setId(id string) {
 
 func (p *Persona) read(id string, node *yaml.Node) []Issue {
 	var fields map[string]*yaml.Node
-	fields, issues := namedObject(id, node, p)
+	fields, issues := namedObject(node, id, p)
 	useNodes, found, issue := sequenceFieldOf(fields, "uses")
 	if issue != nil {
 		return append(issues, *issue)
 	}
 	if !found {
-		return append(issues, *NodeError(fmt.Sprintf(
-			"Invalid persona '%v': must use at least either one form or one external system", id), node))
+		return append(issues, *NodeError("A persona must use either a form or an external system", node))
 	}
 	uses := make([]*Used, 0)
 	for _, useNode := range useNodes {
@@ -146,7 +146,19 @@ func (c PersonaCollector) connectUsed(used *Used, model *ArchitectureModel) []Is
 			}
 		}
 		if used.ExternalSystem == nil {
-			issues = append(issues, *NodeError(fmt.Sprintf("Unknown external system %v", used.ExternalSystemId), used.node))
+			issues = append(issues, *NodeError(fmt.Sprintf("Unknown external system '%v'", used.ExternalSystemId), used.node))
+		}
+	}
+	if used.FormId != "" {
+		for _, service := range model.Services {
+			for _, candidate := range service.Forms {
+				if candidate.Id == used.FormId {
+					used.Form = candidate
+				}
+			}
+		}
+		if used.Form == nil {
+			issues = append(issues, *NodeError(fmt.Sprintf("Unknown form '%v'", used.FormId), used.node))
 		}
 	}
 	return issues

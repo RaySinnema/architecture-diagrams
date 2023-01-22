@@ -8,9 +8,9 @@ import (
 	"strings"
 )
 
-const maxMajorVersion = 1
-const maxMinorVersion = 0
-const maxPatchVersion = 0
+const currentMajorVersion = 1
+const currentMinorVersion = 0
+const currentPatchVersion = 0
 
 var versionPattern = regexp.MustCompile(`\d+\.\d+(\.\d+)?`)
 
@@ -19,7 +19,7 @@ type VersionReader struct {
 
 func (_ VersionReader) read(node *yaml.Node, _ string, model *ArchitectureModel) []Issue {
 	if node == nil {
-		model.Version = fmt.Sprintf("%v.%v.%v", maxMajorVersion, maxMinorVersion, maxPatchVersion)
+		model.Version = fmt.Sprintf("%v.%v.%v", currentMajorVersion, currentMinorVersion, currentPatchVersion)
 		return []Issue{}
 	}
 	version, issue := toString(node, "version")
@@ -31,18 +31,18 @@ func (_ VersionReader) read(node *yaml.Node, _ string, model *ArchitectureModel)
 	}
 	parts := strings.Split(version, ".")
 	major, _ := strconv.Atoi(parts[0])
-	if major > maxMajorVersion {
+	if major > currentMajorVersion {
 		return []Issue{*NodeError(fmt.Sprintf("Undefined version: %s", version), node)}
 	}
-	if major == maxMajorVersion {
+	if major == currentMajorVersion {
 		minor, _ := strconv.Atoi(parts[1])
-		if minor > maxMinorVersion {
+		if minor > currentMinorVersion {
 			return []Issue{*NodeError(fmt.Sprintf("Undefined version: %s", version), node)}
 		}
-		if minor == maxMinorVersion {
+		if minor == currentMinorVersion {
 			if len(parts) > 2 {
 				patch, _ := strconv.Atoi(parts[2])
-				if patch > maxPatchVersion {
+				if patch > currentPatchVersion {
 					return []Issue{*NodeError(fmt.Sprintf("Undefined version: %s", version), node)}
 				}
 			}

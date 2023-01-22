@@ -218,7 +218,7 @@ func assertErrorsForInvalidDefinitions(t *testing.T, cases []InvalidDefinition) 
 }
 
 func TestPersonas(t *testing.T) {
-	yamlWithPersonas := `personas:
+	definition := `personas:
   dev:
     name: Developer
     uses:
@@ -231,15 +231,31 @@ func TestPersonas(t *testing.T) {
     uses:
       - externalSystem: jira
         description: Updates issues
+
+externalSystems:
+  slack:
+    name: Slack
+
+services:
+  console:
+    forms:
+      - subscriptions
 `
 
-	model, _ := LintText(yamlWithPersonas)
+	model, _ := LintText(definition)
 
 	if len(model.Personas) != 2 {
 		t.Fatalf("Incorrect number of personas: %v", len(model.Personas))
 	}
-	if model.Personas[0].Name != "Customer Support" {
-		t.Errorf("Personas not sorted: incorrect name for 1st persona: %v", model.Personas[0].Name)
+	dev := model.Personas[1]
+	if dev.Name != "Developer" {
+		t.Fatalf("Personas not sorted: incorrect name for 2nd persona: %v", model.Personas[0].Name)
+	}
+	if dev.Uses[0].ExternalSystem != model.ExternalSystems[0] {
+		t.Errorf("Missing use of external system: %+v", dev.Uses[0])
+	}
+	if dev.Uses[1].Form != model.Services[0].Forms[0] {
+		t.Errorf("Missing use of service: %+v", dev.Uses[1])
 	}
 }
 
@@ -280,7 +296,7 @@ func TestInvalidPersonas(t *testing.T) {
   dev:
     foo:
       bar: baz
-`, error: "Invalid persona"},
+`, error: "A persona must use either a form or an external system"},
 		{definition: `personas:
   foo:
     uses:
@@ -297,13 +313,18 @@ func TestInvalidPersonas(t *testing.T) {
   foo:
     uses:
       - form: bar
+`, error: "Unknown form 'bar'"},
+		{definition: `personas:
+  foo:
+    uses:
+      - form: bar
         externalSystem: baz
-`, error: "A use may have either a form or an external system"},
+`, error: "A persona may use either a form or an external system"},
 		{definition: `personas:
   foo:
     uses:
       - description: bar
-`, error: "Must use either a form or an external system"},
+`, error: "A persona must use either a form or an external system"},
 		{definition: `personas:
   foo:
     uses:
@@ -346,6 +367,10 @@ func TestExternalSystem(t *testing.T) {
       - service: api
         description: Sends SAR / DDR / CID
         dataFlow: send
+
+services:
+  api:
+    name: API
 `
 
 	model, _ := LintText(yamlWithExternalSystems)
@@ -361,8 +386,8 @@ func TestExternalSystem(t *testing.T) {
 		t.Fatalf("# calls: %v", len(lp.Calls))
 	}
 	call := lp.Calls[0]
-	if call.ServiceId != "api" {
-		t.Errorf("Invalid call: '%v'", call.ServiceId)
+	if call.Service != model.Services[0] {
+		t.Errorf("Invalid call: '%+v'", call)
 	}
 	if call.DataFlow != Send {
 		t.Errorf("Invalid call direction: %v", call.DataFlow)
@@ -413,6 +438,16 @@ func TestInvalidExternalSystems(t *testing.T) {
     calls:
       - description: bar
 `, error: "One of service or externalSystem is required"},
+		{definition: `externalSystems:
+  foo:
+    calls:
+      - service: bar
+`, error: "Unknown service 'bar'"},
+		{definition: `externalSystems:
+  foo:
+    calls:
+      - externalSystem: bar
+`, error: "Unknown external system 'bar'"},
 		{definition: `externalSystems:
   foo:
     calls:
@@ -570,7 +605,13 @@ func TestInvalidService(t *testing.T) {
   foo:
     dataStores:
       - description: bar
-`, error: "A dataStore must have either a database or a queue"},
+`, error: "A dataStore must be a database or a queue"},
+		{definition: `services:
+  foo:
+    dataStores:
+      - database: bar
+        queue: baz
+`, error: "A dataStore can be either a database or a queue, but not both"},
 		{definition: `services:
   foo:
     dataStores:
@@ -609,7 +650,7 @@ func TestInvalidService(t *testing.T) {
   foo:
     forms:
       bar:
-        state:
+        state:	
           - baz
 `, error: "state must be a string"},
 		{definition: `services:

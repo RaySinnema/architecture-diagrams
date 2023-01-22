@@ -12,14 +12,6 @@ type DataStoreUse struct {
 	DataFlow    DataFlow
 }
 
-func (d *DataStoreUse) setDescription(description string) {
-	d.Description = description
-}
-
-func (d *DataStoreUse) setDataFlow(dataFlow DataFlow) {
-	d.DataFlow = dataFlow
-}
-
 func (d *DataStoreUse) read(node *yaml.Node) []Issue {
 	fields, issue := toMap(node)
 	if issue != nil {
@@ -47,11 +39,19 @@ func (d *DataStoreUse) readDataStore(node *yaml.Node, fields map[string]*yaml.No
 		d.QueueId = queue
 	}
 	if d.QueueId == "" && d.DatabaseId == "" {
-		issues = append(issues, *NodeError("A dataStore must have either a database or a queue", node))
+		issues = append(issues, *NodeError("A dataStore must be a database or a queue", node))
 	} else if d.QueueId != "" && d.DatabaseId != "" {
-		issues = append(issues, *NodeError("A dataStore can have either a database or a queue, but not both", node))
+		issues = append(issues, *NodeError("A dataStore can be either a database or a queue, but not both", node))
 	}
 	return issues
+}
+
+func (d *DataStoreUse) setDescription(description string) {
+	d.Description = description
+}
+
+func (d *DataStoreUse) setDataFlow(dataFlow DataFlow) {
+	d.DataFlow = dataFlow
 }
 
 type Form struct {
@@ -61,12 +61,12 @@ type Form struct {
 	State State
 }
 
-func (f *Form) setId(id string) {
-	f.Id = id
-}
-
 func (f *Form) setNode(node *yaml.Node) {
 	f.node = node
+}
+
+func (f *Form) setId(id string) {
+	f.Id = id
 }
 
 func (f *Form) setName(name string) {
@@ -82,45 +82,33 @@ type Service struct {
 	Id             string
 	Name           string
 	DataStores     []*DataStoreUse
-	Forms          []Form
+	Forms          []*Form
+	Calls          []*Call
 	TechnologyIds  []string
 	TechnologiesId string
-	Calls          []*Call
 	State          State
 }
 
-func (s *Service) setState(state State) {
-	s.State = state
-}
-
-func (s *Service) setTechnologyBundleId(technologyBundle string) {
-	s.TechnologiesId = technologyBundle
-}
-
-func (s *Service) setTechnologyIds(technologies []string) {
-	s.TechnologyIds = technologies
-}
-
-func (s *Service) setId(id string) {
-	s.Id = id
+func (s *Service) read(id string, node *yaml.Node) []Issue {
+	var fields map[string]*yaml.Node
+	fields, issues := namedObject(node, id, s)
+	issues = append(issues, s.readDataStores(fields)...)
+	issues = append(issues, s.readForms(fields)...)
+	issues = append(issues, setTechnologies(fields, s)...)
+	issues = append(issues, setState(fields, s)...)
+	return issues
 }
 
 func (s *Service) setNode(node *yaml.Node) {
 	s.node = node
 }
 
-func (s *Service) setName(name string) {
-	s.Name = name
+func (s *Service) setId(id string) {
+	s.Id = id
 }
 
-func (s *Service) read(id string, node *yaml.Node) []Issue {
-	var fields map[string]*yaml.Node
-	fields, issues := namedObject(id, node, s)
-	issues = append(issues, s.readDataStores(fields)...)
-	issues = append(issues, s.readForms(fields)...)
-	issues = append(issues, setTechnologies(fields, s)...)
-	issues = append(issues, setState(fields, s)...)
-	return issues
+func (s *Service) setName(name string) {
+	s.Name = name
 }
 
 func (s *Service) readDataStores(fields map[string]*yaml.Node) []Issue {
@@ -143,11 +131,11 @@ func (s *Service) readForms(fields map[string]*yaml.Node) []Issue {
 	issues := make([]Issue, 0)
 	formMaps, found, issue := mapFieldOf(fields, "forms")
 	if found && issue == nil {
-		forms := make([]Form, 0)
+		forms := make([]*Form, 0)
 		for formId, formNode := range formMaps {
 			form := Form{}
-			forms = append(forms, form)
-			formFields, formIssues := namedObject(formId, formNode, &form)
+			forms = append(forms, &form)
+			formFields, formIssues := namedObject(formNode, formId, &form)
 			issues = append(issues, formIssues...)
 			issues = append(issues, setState(formFields, &form)...)
 		}
@@ -155,12 +143,12 @@ func (s *Service) readForms(fields map[string]*yaml.Node) []Issue {
 	} else if found {
 		formNodes, _, issue := sequenceFieldOf(fields, "forms")
 		if issue == nil {
-			forms := make([]Form, 0)
+			forms := make([]*Form, 0)
 			for _, formNode := range formNodes {
 				name, issue := toString(formNode, "form")
 				if issue == nil {
 					form := Form{}
-					forms = append(forms, form)
+					forms = append(forms, &form)
 					form.node = formNode
 					form.Id = name
 					form.Name = name
@@ -175,6 +163,18 @@ func (s *Service) readForms(fields map[string]*yaml.Node) []Issue {
 		}
 	}
 	return issues
+}
+
+func (s *Service) setTechnologyBundleId(technologyBundle string) {
+	s.TechnologiesId = technologyBundle
+}
+
+func (s *Service) setTechnologyIds(technologies []string) {
+	s.TechnologyIds = technologies
+}
+
+func (s *Service) setState(state State) {
+	s.State = state
 }
 
 type ServiceReader struct {

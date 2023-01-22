@@ -13,17 +13,15 @@ const (
 	Deprecated
 )
 
-type Evolveable interface {
+type Evolvable interface {
 	setState(state State)
 }
 
-const stateField = "state"
-const defaultState = "ok"
+func setState(fields map[string]*yaml.Node, e Evolvable) []Issue {
+	const defaultState = "ok"
+	var allowedStates = []string{defaultState, "emerging", "review", "revision", "legacy", "deprecated"}
 
-var allowedStates = []string{defaultState, "emerging", "review", "revision", "legacy", "deprecated"}
-
-func setState(fields map[string]*yaml.Node, e Evolveable) []Issue {
-	value, issue := enumFieldOf(fields, stateField, allowedStates, defaultState)
+	value, issue := enumFieldOf(fields, "state", allowedStates, defaultState)
 	if issue != nil {
 		return []Issue{*issue}
 	}

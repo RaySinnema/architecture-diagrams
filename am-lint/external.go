@@ -28,7 +28,7 @@ func (es *ExternalSystem) setName(name string) {
 
 func (es *ExternalSystem) read(id string, node *yaml.Node) []Issue {
 	var fields map[string]*yaml.Node
-	fields, issues := namedObject(id, node, es)
+	fields, issues := namedObject(node, id, es)
 	issues = append(issues, es.readType(fields)...)
 	issues = append(issues, es.readCalls(fields)...)
 	return issues
@@ -51,15 +51,15 @@ func (es *ExternalSystem) readCalls(fields map[string]*yaml.Node) []Issue {
 		return []Issue{*issue}
 	}
 	issues := make([]Issue, 0)
+	calls := make([]*Call, 0)
 	if found {
-		calls := make([]*Call, 0)
 		for _, callNode := range callNodes {
 			call := Call{}
 			calls = append(calls, &call)
 			issues = append(issues, call.read(callNode)...)
 		}
-		es.Calls = calls
 	}
+	es.Calls = calls
 	return issues
 }
 
@@ -110,7 +110,17 @@ func (c ExternalSystemConnector) connectCall(call *Call, model *ArchitectureMode
 			}
 		}
 		if call.ExternalSystem == nil {
-			issues = append(issues, *NodeError(fmt.Sprintf("Unknown external system %v", call.ExternalSystemId), call.node))
+			issues = append(issues, *NodeError(fmt.Sprintf("Unknown external system '%v'", call.ExternalSystemId), call.node))
+		}
+	}
+	if call.ServiceId != "" {
+		for _, candidate := range model.Services {
+			if candidate.Id == call.ServiceId {
+				call.Service = candidate
+			}
+		}
+		if call.Service == nil {
+			issues = append(issues, *NodeError(fmt.Sprintf("Unknown service '%v'", call.ServiceId), call.node))
 		}
 	}
 	return issues

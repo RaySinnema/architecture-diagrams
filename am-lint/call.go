@@ -8,10 +8,11 @@ import (
 type Call struct {
 	node             *yaml.Node
 	Description      string
-	ExternalSystemId string `yaml:"externalSystem,omitempty"`
-	ServiceId        string `yaml:"service,omitempty"`
+	ExternalSystemId string          `yaml:"externalSystem,omitempty"`
+	ExternalSystem   *ExternalSystem `yaml:",omitempty"`
+	ServiceId        string          `yaml:"service,omitempty"`
+	Service          *Service        `yaml:",omitempty"`
 	DataFlow         DataFlow
-	ExternalSystem   *ExternalSystem
 }
 
 func (c *Call) setDescription(description string) {

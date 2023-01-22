@@ -170,6 +170,14 @@ The `type` is also optional.
 It can be any string value.
 There are no semantics associated with these values, but they can be used for rendering external systems differently.
 
+The `calls` element is a sequence of calls to either external systems or services.
+A call may optionally have a `description`.
+
+A call may also specify a `dataFlow`.
+When omitted, `bidirectional` is assumed.
+This property describes the flow of data from the perspective of the external system, so `send` means that the external
+system sends data to the service or other external system, but gets nothing substantial back.
+
 
 ### Services
 

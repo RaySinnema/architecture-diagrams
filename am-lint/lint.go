@@ -26,10 +26,7 @@ func LintText(text string) (*ArchitectureModel, []Issue) {
 
 func lint(definition string, fileName string) (model *ArchitectureModel, issues []Issue) {
 	var node yaml.Node
-	err := yaml.Unmarshal([]byte(definition), &node)
-	if err != nil {
-		return nil, invalidYaml(err.Error())
-	}
+	_ = yaml.Unmarshal([]byte(definition), &node)
 	if !node.IsZero() {
 		if node.Kind != yaml.DocumentNode || node.Content[0].Kind != yaml.MappingNode {
 			return nil, invalidYaml("must be a map")

@@ -12,14 +12,15 @@ type Implementable interface {
 
 func setTechnologies(fields map[string]*yaml.Node, implementable Implementable) []Issue {
 	issues := make([]Issue, 0)
-	technologyBundle, found, issue := stringFieldOf(fields, "technologies")
+	const technologiesField = "technologies"
+	technologyBundle, found, issue := stringFieldOf(fields, technologiesField)
 	if issue == nil {
 		if found {
 			implementable.setTechnologyBundleId(technologyBundle)
 		}
 		return issues
 	}
-	technologiesNodes, _, issue := sequenceFieldOf(fields, "technologies")
+	technologiesNodes, _, issue := sequenceFieldOf(fields, technologiesField)
 	if issue == nil {
 		technologies := make([]string, 0)
 		for _, technologyNode := range technologiesNodes {

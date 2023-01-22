@@ -41,35 +41,6 @@ func toMap(node *yaml.Node) (map[string]*yaml.Node, *Issue) {
 	return result, nil
 }
 
-func toString(node *yaml.Node, field string) (string, *Issue) {
-	if node.Kind == yaml.ScalarNode {
-		return node.Value, nil
-	}
-	return "", NeedTypeError(field, node, "string")
-
-}
-
-func hasDifferentValueThan(value string, allowed []string) bool {
-	for _, ok := range allowed {
-		if ok == value {
-			return false
-		}
-	}
-	return true
-}
-
-func stringFieldOf(fields map[string]*yaml.Node, field string) (string, bool, *Issue) {
-	node, found := fields[field]
-	if found {
-		result, issue := toString(node, field)
-		if issue != nil {
-			return "", true, issue
-		}
-		return result, true, nil
-	}
-	return "", false, nil
-}
-
 func sequenceFieldOf(fields map[string]*yaml.Node, field string) ([]*yaml.Node, bool, *Issue) {
 	var result []*yaml.Node
 	var issue *Issue
@@ -90,18 +61,24 @@ func toSequence(node *yaml.Node, field string) ([]*yaml.Node, *Issue) {
 	return []*yaml.Node{}, NeedTypeError(field, node, "sequence")
 }
 
-func stringsIn(values []string) string {
-	result := ""
-	for index, value := range values {
-		if index == 0 {
-			result = fmt.Sprintf("'%v'", value)
-		} else if index == len(values)-1 {
-			result = fmt.Sprintf("%v, or '%v'", result, value)
-		} else {
-			result = fmt.Sprintf("%v, '%v'", result, value)
+func stringFieldOf(fields map[string]*yaml.Node, field string) (string, bool, *Issue) {
+	node, found := fields[field]
+	if found {
+		result, issue := toString(node, field)
+		if issue != nil {
+			return "", true, issue
 		}
+		return result, true, nil
 	}
-	return result
+	return "", false, nil
+}
+
+func toString(node *yaml.Node, field string) (string, *Issue) {
+	if node.Kind == yaml.ScalarNode {
+		return node.Value, nil
+	}
+	return "", NeedTypeError(field, node, "string")
+
 }
 
 func enumFieldOf(fields map[string]*yaml.Node, field string, allowed []string, defaultValue string) (string, *Issue) {
@@ -116,4 +93,27 @@ func enumFieldOf(fields map[string]*yaml.Node, field string, allowed []string, d
 		return "", NodeError(fmt.Sprintf("Invalid %v: must be one of %v", field, stringsIn(allowed)), fields[field])
 	}
 	return value, nil
+}
+
+func hasDifferentValueThan(value string, allowed []string) bool {
+	for _, ok := range allowed {
+		if ok == value {
+			return false
+		}
+	}
+	return true
+}
+
+func stringsIn(values []string) string {
+	result := ""
+	for index, value := range values {
+		if index == 0 {
+			result = fmt.Sprintf("'%v'", value)
+		} else if index == len(values)-1 {
+			result = fmt.Sprintf("%v, or '%v'", result, value)
+		} else {
+			result = fmt.Sprintf("%v, '%v'", result, value)
+		}
+	}
+	return result
 }
