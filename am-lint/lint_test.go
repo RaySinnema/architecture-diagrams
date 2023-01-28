@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"reflect"
 	"strings"
 	"testing"
 )
@@ -254,7 +253,7 @@ services:
 	if dev.Uses[0].ExternalSystem != model.ExternalSystems[0] {
 		t.Errorf("Missing use of external system: %+v", dev.Uses[0])
 	}
-	if dev.Uses[1].Form != model.Services[0].Forms[0] {
+	if dev.Uses[1].Used() != model.Services[0].Forms[0] {
 		t.Errorf("Missing use of service: %+v", dev.Uses[1])
 	}
 }
@@ -350,8 +349,12 @@ externalSystems:
 	if len(issues) > 0 {
 		t.Errorf("Got issues: %+v", issues)
 	}
-	if model.Personas[0].Uses[0].Used() != model.ExternalSystems[0] {
+	used := model.Personas[0].Uses[0]
+	if used.Used() != model.ExternalSystems[0] {
 		t.Errorf("Persona use isn't linked up: %+v", *model)
+	}
+	if used.DataFlow != Bidirectional {
+		t.Errorf("Persona use has wrong direction of data flow: %+v", *model)
 	}
 }
 
@@ -367,30 +370,42 @@ func TestExternalSystem(t *testing.T) {
       - service: api
         description: Sends SAR / DDR / CID
         dataFlow: send
+        technologies:
+          - http
 
 services:
   api:
     name: API
+
+technologies:
+  http:
+    name: HTTP
 `
 
-	model, _ := LintText(yamlWithExternalSystems)
+	model, issues := LintText(yamlWithExternalSystems)
 
 	if len(model.ExternalSystems) != 2 {
-		t.Fatalf("Incorrect number of external systems: %v", len(model.ExternalSystems))
+		t.Fatalf("Incorrect number of external systems: %+v", issues)
 	}
 	if model.ExternalSystems[0].Name != "Local platform" {
 		t.Fatalf("External systems not sorted: incorrect name for 1st external system: %v", model.ExternalSystems[0].Name)
 	}
 	lp := model.ExternalSystems[0]
+	if lp.Type != "local" {
+		t.Errorf("Invalid type: %+v", lp)
+	}
 	if len(lp.Calls) != 1 {
 		t.Fatalf("# calls: %v", len(lp.Calls))
 	}
 	call := lp.Calls[0]
-	if call.Service != model.Services[0] {
+	if call.Callee() != model.Services[0] {
 		t.Errorf("Invalid call: '%+v'", call)
 	}
 	if call.DataFlow != Send {
 		t.Errorf("Invalid call direction: %v", call.DataFlow)
+	}
+	if len(call.Technologies) != 1 {
+		t.Errorf("Technologies not resolved")
 	}
 }
 
@@ -519,15 +534,33 @@ func TestService(t *testing.T) {
       subscriptionsOld:
         name: Subscriptions
         state: legacy
+
+technologyBundles:
+  jsonOverHttp:
+    - json
+    - http
+  server:
+    - java
+    - spring
+    - docker
+
+technologies:
+  json:
+    name: JSON
+  http:
+    name: HTTP 1.1
+  java:
+    name: Java 17
+  spring:
+    name: Spring Boot 2
+  docker:
+    name: Docker
 `
 
 	model, issues := LintText(definition)
 
 	if model == nil {
 		t.Fatalf("Invalid model: %+v", issues)
-	}
-	if len(issues) > 0 {
-		t.Errorf("Unexpected issues: %+v", issues)
 	}
 	if len(model.Services) != 3 {
 		t.Fatalf("Incorrect number of services: %v", len(model.Services))
@@ -544,8 +577,8 @@ func TestService(t *testing.T) {
 	} else {
 		t.Errorf("Invalid # data stores: %+v", api)
 	}
-	if api.TechnologiesId != "server" {
-		t.Errorf("Invalid technologies: %+v", api.TechnologiesId)
+	if len(api.Technologies) != 3 {
+		t.Errorf("Service technologies not resolved: %+v", api)
 	}
 	if api.State != Ok {
 		t.Errorf("Invalid api state: '%v'", api.State)
@@ -555,8 +588,8 @@ func TestService(t *testing.T) {
 	if len(form.Forms) != 1 {
 		t.Fatalf("Invalid # forms: %+v", form)
 	}
-	if !reflect.DeepEqual(form.TechnologyIds, []string{"java", "spring"}) {
-		t.Errorf("Invalid form technologies: %+v", form.TechnologyIds)
+	if len(form.Calls[0].Technologies) != 2 {
+		t.Errorf("Invalid form technologies: %+v", form)
 	}
 	if form.State != Emerging {
 		t.Errorf("Invalid form state: '%v'", form.State)
@@ -638,6 +671,15 @@ func TestInvalidService(t *testing.T) {
 `, error: "technology must be a string"},
 		{definition: `services:
   foo:
+    technologies:
+      - bar
+`, error: "Unknown technology 'bar'"},
+		{definition: `services:
+  foo:
+    calls: bar
+`, error: "calls must be a sequence"},
+		{definition: `services:
+  foo:
     forms: bar
 `, error: "forms must be a sequence"},
 		{definition: `services:
@@ -669,5 +711,203 @@ func TestInvalidService(t *testing.T) {
   foo:
     state: weird
 `, error: "Invalid state: must be one of 'ok', 'emerging', 'review', 'revision', 'legacy', or 'deprecated'"},
+	})
+}
+
+func TestDatabase(t *testing.T) {
+	definition := `databases:
+  subscriptions:
+    name: Subscriptions & in-flight requests
+    technologies: cloudMySql
+    apiTechnologies: sql
+  requestIdsMap:
+    name: Request IDs map
+    description: Stores mapping between IDs from different systems for the same request
+    technologies:
+      - cloudsql
+      - mysql
+    apiTechnologies:
+       - sql
+
+technologyBundles:
+  cloudMySql:
+    - cloudsql
+    - mysql
+
+technologies:
+  cloudsql:
+    name: Google CloudSQL
+  mysql:
+    name: MySQL
+  sql:
+    name: SQL
+`
+
+	model, _ := LintText(definition)
+
+	if len(model.Databases) != 2 {
+		t.Fatalf("Invalid # databases: %+v", model.Databases)
+	}
+	if model.Databases[0].Name != "Request IDs map" {
+		t.Fatalf("Databases not sorted")
+	}
+	if len(model.Databases[0].Technologies) != 2 {
+		t.Errorf("Didn't resolve technologies")
+	}
+}
+
+func TestInvalidDatabase(t *testing.T) {
+	assertErrorsForInvalidDefinitions(t, []InvalidDefinition{
+		{definition: `databases:
+  - foo
+  - bar
+`, error: "Expected a map"},
+	})
+}
+
+func TestQueue(t *testing.T) {
+	definition := `queues:
+  ape:
+    name: Zebra
+  events:
+    name: Domain Events
+    description: One topic per event type.
+    technologies:
+      - pubsub
+    apiTechnologies: grpc
+
+technologies:
+  pubsub:
+    name: Google Pub/Sub
+  grpc:
+    name: gRPC
+`
+
+	model, _ := LintText(definition)
+
+	if len(model.Queues) != 2 {
+		t.Fatalf("Invalid # queues: %+v", model.Queues)
+	}
+	if model.Queues[0].Name != "Domain Events" {
+		t.Fatalf("Queues not sorted")
+	}
+	if len(model.Queues[0].Technologies) != 1 {
+		t.Fatalf("Technologies not resolved")
+	}
+	if len(model.Queues[0].ApiTechnologies) != 1 {
+		t.Fatalf("API technologies not resolved")
+	}
+}
+
+func TestTechnologies(t *testing.T) {
+	definition := `technologies:
+  cloudSql:
+    name: CloudSQL
+    quadrant: platforms
+    ring: hold
+    description: Replace with AWS technology
+  adr:
+    name: Architecture Decision Records
+    quadrant: techniques
+`
+
+	model, _ := LintText(definition)
+
+	if len(model.Technologies) != 2 {
+		t.Fatalf("Invalid # technologies: %+v", model.Queues)
+	}
+	if model.Technologies[0].Name != "Architecture Decision Records" {
+		t.Fatalf("Queues not technologies")
+	}
+	adr := model.Technologies[0]
+	if adr.Quadrant != Techniques {
+		t.Errorf("Invalid quadrant: %v", adr.Quadrant)
+	}
+	if adr.Ring != Adopt {
+		t.Errorf("Invalid ring: %v", adr.Ring)
+	}
+}
+
+func TestInvalidTechnology(t *testing.T) {
+	assertErrorsForInvalidDefinitions(t, []InvalidDefinition{
+		{definition: `technologies:
+  foo:
+    ring: adopt
+`, error: "Missing required field quadrant"},
+		{definition: `technologies:
+  foo:
+    quadrant: tools
+    ring: bar
+`, error: "Invalid ring: must be one of 'trial', 'assess', 'adopt', or 'hold'"},
+	})
+}
+
+func TestTechnologyBundle(t *testing.T) {
+	definition := `technologyBundles:
+  serverWithUi:
+    - server
+    - ui
+    - thymeleaf
+  ui:
+    - thymeleaf
+  server:
+    - java
+    - spring
+    - docker
+
+technologies:
+  docker:
+    name: Docker
+    quadrant: platform
+    ring: adopt
+  java:
+    name: Java 17
+    quadrant: languagesAndFrameworks
+    ring: adopt
+  spring:
+    name: Spring Boot 2
+    quadrant: languagesAndFrameworks
+    ring: hold
+    description: Upgrade to version 3
+  thymeleaf:
+    name: Thymeleaf
+    quadrant: languagesAndFrameworks
+    ring: adopt
+`
+
+	model, _ := LintText(definition)
+
+	if len(model.TechnologyBundles) != 3 {
+		t.Fatalf("Invalid # technologies: %+v", model.TechnologyBundles)
+	}
+	if model.TechnologyBundles[0].Id != "server" {
+		t.Fatalf("Technology bundles not sorted: %+v", model.TechnologyBundles)
+	}
+	server := model.TechnologyBundles[0]
+	if len(server.TechnologyIds) != 3 {
+		t.Errorf("Invalid # technologies: %v", server.TechnologyIds)
+	}
+	if len(server.Technologies) != 3 {
+		t.Errorf("Didn't resolve all technologies for bundle")
+	}
+	if len(model.TechnologyBundles[1].Technologies) != 4 {
+		t.Errorf("Didn't recursively resolve all technologies for bundle: %v", model.TechnologyBundles[1].Technologies)
+	}
+}
+
+func TestInvalidTechnologyBundle(t *testing.T) {
+	assertErrorsForInvalidDefinitions(t, []InvalidDefinition{
+		{definition: `technologyBundles:
+  foo:
+    bar: baz
+`, error: "technologies must be a sequence"},
+		{definition: `technologyBundles:
+  foo:
+    - bar: baz
+`, error: "technology must be a string"},
+		{definition: `technologyBundles:
+  foo:
+    - bar
+`, error: "Unknown technology 'bar'"},
 	})
 }

@@ -17,11 +17,11 @@ type Evolvable interface {
 	setState(state State)
 }
 
-func setState(fields map[string]*yaml.Node, e Evolvable) []Issue {
+func setState(owner *yaml.Node, fields map[string]*yaml.Node, e Evolvable) []Issue {
 	const defaultState = "ok"
 	var allowedStates = []string{defaultState, "emerging", "review", "revision", "legacy", "deprecated"}
 
-	value, issue := enumFieldOf(fields, "state", allowedStates, defaultState)
+	value, issue := enumFieldOf(owner, fields, "state", allowedStates, defaultState)
 	if issue != nil {
 		return []Issue{*issue}
 	}

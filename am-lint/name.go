@@ -16,10 +16,7 @@ type Nameable interface {
 func namedObject(node *yaml.Node, id string, nameable Nameable) (map[string]*yaml.Node, []Issue) {
 	nameable.setNode(node)
 	nameable.setId(id)
-	fields, issue := toMap(node)
-	if issue != nil {
-		return nil, []Issue{*issue}
-	}
+	fields, _ := toMap(node)
 	return fields, setName(fields, nameable, id)
 }
 

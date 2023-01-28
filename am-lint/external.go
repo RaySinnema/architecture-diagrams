@@ -96,6 +96,7 @@ func (c ExternalSystemConnector) connect(model *ArchitectureModel) []Issue {
 	for _, externalSystem := range model.ExternalSystems {
 		for _, call := range externalSystem.Calls {
 			issues = append(issues, c.connectCall(call, model)...)
+			issues = append(issues, connectTechnologies(call, model)...)
 		}
 	}
 	return issues

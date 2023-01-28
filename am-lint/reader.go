@@ -81,13 +81,16 @@ func toString(node *yaml.Node, field string) (string, *Issue) {
 
 }
 
-func enumFieldOf(fields map[string]*yaml.Node, field string, allowed []string, defaultValue string) (string, *Issue) {
+func enumFieldOf(owner *yaml.Node, fields map[string]*yaml.Node, field string, allowed []string, defaultValue string) (string, *Issue) {
 	value, found, issue := stringFieldOf(fields, field)
 	if issue != nil {
 		return "", issue
 	}
 	if !found {
-		return defaultValue, nil
+		if hasDifferentValueThan(defaultValue, allowed) {
+			return "", NodeError(fmt.Sprintf("Missing required field %v", field), owner)
+		}
+		value = defaultValue
 	}
 	if hasDifferentValueThan(value, allowed) {
 		return "", NodeError(fmt.Sprintf("Invalid %v: must be one of %v", field, stringsIn(allowed)), fields[field])

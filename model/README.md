@@ -140,7 +140,7 @@ personas:
         description: Maintains subscriber
 ```
 
-The `personas` element is a map where each item defines a persona.
+The `personas` element is a map where each value defines a persona.
 The `name` is optional; when omitted a human-friendly version of the key is used.
 
 The `uses` list refers to the [external systems](#external-systems) and [forms](#services) the persona uses.
@@ -163,20 +163,46 @@ externalSystems:
         dataFlow: send
 ```
 
-The `externalSystems` element is a map where each item defines an external system.
+The `externalSystems` element is a map where each value defines an external system.
 The `name` is optional; when omitted a human-friendly version of the key is used.
 
 The `type` is also optional.
 It can be any string value.
 There are no semantics associated with these values, but they can be used for rendering external systems differently.
+For example, you could use `internal` and `external` to distinguish between those external systems
+that are under the company's control and those that aren't. 
 
 The `calls` element is a sequence of calls to either external systems or services.
 A call may optionally have a `description`.
 
-A call may also specify a `dataFlow`.
+A call may specify a [dataFlow](#data-flows).
 When omitted, `bidirectional` is assumed.
-This property describes the flow of data from the perspective of the external system, so `send` means that the external
-system sends data to the service or other external system, but gets nothing substantial back.
+
+A call may specify which [technologies](#technology-references) it uses to communicate.
+
+
+### Data flows
+
+Some actors communicate with other actors.
+For instance, a [persona](#personas) may use an [external system](#external-systems).
+In this example, the persona is the initiator and the external system is the target.
+Whenever communication occurs between an initiator and a target, you may specify the `dataFlow`
+property, which indicates the direction in which data is exchanged:
+
+- `bidirectional` - The default. Data flows from initiator to target and back, i.e. send/receive 
+  or read/write.
+- `send` - Data flows from initiator to target, i.e. write.
+- `receive` - Data flows from target to initiator, i.e. read.
+
+
+### Technology references
+
+Many model elements are implemented using one or more technologies and/or communicate with other
+elements using one or more technologies.
+In such places, a field `technologies` can be used to list these technologies.
+The value of this field can either be a sequence or a string.
+If a sequence, the values are the names of individual [technologies](#technologies).
+If a string, the value is either the name of a single technology or of a [technology bundle](#technology-bundles).
 
 
 ### Services
@@ -204,26 +230,19 @@ services:
         technologies: jsonOverHttp
 ```
 
-The `services` element is a map where each item defines a service.
+The `services` element is a map where each value defines a service.
 The `name` is optional; when omitted a human-friendly version of the key is used.
 
-The value of the `technologies` key is either a string value or a list of string values.
-A single string value points to a [technology bundle](#technology-bundles), whereas a list contains individual
-[technologies](#technologies).
-
-A service may have an optional [state](#states); if omitted, `ok` is assumed.
+A service may list the [technologies](#technology-references) used to implement it.
+A service may also have an optional [state](#states); if omitted, `ok` is assumed.
 
 The `dataStores` property contains a list of data stores.
 Each data store is a map that has either a `queue` or a `database` key, which refers to a [queue](#queues) or
 [database](#databases), respectively.
-
-A data store's `dataFlow` may be either `send`, `receive` or `bidirectional`.
-When omitted, `bidirectional` is assumed.
-This property describes the flow of data from the perspective of the service, so `send` means that the service sends
-data to the data store, but gets nothing substantial back.
+A service may indicate the [dataFlow](#data-flows) between itself and the data store.
 
 The `forms` property contains a list of forms implemented by the service.
-To specify the form's [state](#states), use a map instead:
+To specify the form's [state](#states), use a map instead of a sequence:
 
 ```yaml
 services:
@@ -235,8 +254,24 @@ services:
 ```
 
 The `calls` property lists which services and [external systems](#external-systems) this service calls.
-The `technologies` for the call works the same way as for the service itself.
-The `dataFlow` for the call works the same way as for data stores.
+Each call may list the [technologies](#technology-references) used for communication as well as the
+direction of the [data flow](#data-flows).
+
+
+### States
+
+A system is implemented using [services](#services), which get created, modified, and retired over time.
+This lifecycle is captured using the optional `state` property, which can have the following values:
+
+- `ok` - The default. The component is fit for use.
+- `emerging` - The component doesn't exist yet or is not quite ready for use.
+- `review` - The component is under review; it's not yet clear what it's state is.
+- `revision` - The component needs some changes, but it needn't be replaced.
+- `legacy` - The component needs to be replaced, but its alternative is still `emerging`.
+- `deprecated` - The component is ready to be removed; the alternative is already in place.
+
+These states are applicable to [services](#services), [databases](#databases), [queues](#queues), and
+[forms](#services).
 
 
 ### Databases
@@ -248,19 +283,21 @@ databases:
   subscriptions:
     name: Subscriptions & in-flight requests
     technologies: cloudMySql
-    apiTechnology: sql
+    apiTechnologies: sql
 ```
 
-The `databases` element is a map where each item defines a database.
+The `databases` element is a map where each value defines a database.
 The `name` is optional; when omitted a human-friendly version of the key is used.
 
-The value of the `technologies` key is either a string value or a list of string values.
-A single string value points to a [technology bundle](#technology-bundles), whereas a list contains individual
-[technologies](#technologies).
-
-The `apiTechnology` lists to the technology used to communicate with the database via its API.
-
 A database may have an optional [state](#states); if omitted, `ok` is assumed.
+
+A database may list the [technologies](#technology-references) used to implement it.
+A database may also use the `apiTechnologies` field to list the technologies used to communicate with it.
+It's semantics are exactly the same as for `technologies`.
+
+Databases and [queues](#queues) have the exact same definition.
+They exist as distinct model elements to express their different usage.
+For instance, a queue can be used to transport [events](#events), but a database can't.
 
 
 ### Queues
@@ -274,19 +311,21 @@ queues:
     description: One topic per event type.
     technologies:
       - pubsub
-    apiTechnology: grpc
+    apiTechnologies: grpc
 ```
 
-The `queues` element is a map where each item defines a queue.
+The `queues` element is a map where each value defines a queue.
 The `name` is optional; when omitted a human-friendly version of the key is used.
 
-The value of the `technologies` key is either a string value or a list of string values.
-A single string value points to a [technology bundle](#technology-bundles), whereas a list contains individual
-[technologies](#technologies).
-
-The `apiTechnology` lists the technology used to communicate with the queue via its API.
-
 A queue may have an optional [state](#states); if omitted, `ok` is assumed.
+
+A queue may list the [technologies](#technology-references) used to implement it.
+A queue may also use the `apiTechnologies` field to list the technologies used to communicate with it.
+It's semantics are exactly the same as for `technologies`.
+
+Queues and [databases](#databases) have the exact same definition.
+They exist as distinct model elements to express their different usage.
+For instance, a queue can be used to transport [events](#events), but a database can't.
 
 
 ### Technologies
@@ -302,7 +341,7 @@ technologies:
     description: Replace with AWS technology
 ```
 
-The `technologies` element is a map where each item defines a technology.
+The `technologies` element is a map where each value defines a technology.
 The `name` is optional; when omitted a human-friendly version of the key is used.
 
 The `quadrant` specifies the type of technology.
@@ -315,7 +354,7 @@ If omitted, `adopt` is assumed.
 
 ### Technology bundles
 
-It's fairly common for a team to have a Golden Path for a tech stack.
+It's fairly common for a team, department, or company to have a Golden Path for their tech stack.
 This favored list of [technologies](#technologies) gets used for most, if not all, [services](#services).
 When both the list of services and the list of technologies used get larger, the burden of specifying the
 technologies over and over again increases.
@@ -332,24 +371,8 @@ technologyBundles:
     - thymeleaf
 ```
 
-The `technologyBundles` element is a map where each item defines a technology bundle, which is nothing but a list
+The `technologyBundles` element is a map where each value defines a technology bundle, which is nothing but a list
 of references to technologies and/or other technology bundles.
-
-
-### States
-
-A system is implemented using [services](#services), which get created, modified, and retired over time.
-This lifecycle is captured using the optional `state` property, which can have the following values:
-
-- `ok` - The default. The component is fit for use.
-- `emerging` - The component doesn't exist yet or is not quite ready for use.
-- `review` - The component is under review; it's not yet clear what it's state is.
-- `revision` - The component needs some changes, but it needn't be replaced.
-- `legacy` - The component needs to be replaced, but its alternative is still `emerging`. 
-- `deprecated` - The component is ready to be removed; the alternative is already in place.
-
-These states are applicable to [services](#services), [databases](#databases), [queues](#queues), and
-[forms](#services).
 
 
 ## Workflows
@@ -369,7 +392,7 @@ workflows:
         event: Registered
 ```
 
-The `workflows` element is a map where each item defines a workflow.
+The `workflows` element is a map where each value defines a workflow.
 The `name` is optional; when omitted a human-friendly version of the key is used.
 
 The `steps` list contains the steps of the workflow.

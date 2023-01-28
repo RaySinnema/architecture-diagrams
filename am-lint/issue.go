@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"gopkg.in/yaml.v3"
-	"strconv"
 )
 
 type Level int64
@@ -40,7 +39,7 @@ func kindToString(kind yaml.Kind) string {
 	case yaml.ScalarNode:
 		return "scalar"
 	default:
-		return strconv.FormatInt(int64(kind), 10)
+		return fmt.Sprintf("Kind(%d)", kind)
 	}
 }
 

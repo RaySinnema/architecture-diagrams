@@ -7,16 +7,25 @@ import (
 )
 
 var readers = map[string]ModelPartReader{
-	"version":         VersionReader{},
-	"system":          SystemReader{},
-	"personas":        PersonaReader{},
-	"externalSystems": ExternalSystemReader{},
-	"services":        ServiceReader{},
+	"databases":         DatabaseReader{},
+	"externalSystems":   ExternalSystemReader{},
+	"personas":          PersonaReader{},
+	"queues":            QueueReader{},
+	"services":          ServiceReader{},
+	"system":            SystemReader{},
+	"technologyBundles": TechnologyBundleReader{},
+	"technologies":      TechnologyReader{},
+	"version":           VersionReader{},
 }
 
 var connectors = []Connector{
-	PersonaCollector{},
+	// Maintain order
+	TechnologyBundleConnector{},
+	DatabaseConnector{},
+	QueueConnector{},
+	ServiceConnector{},
 	ExternalSystemConnector{},
+	PersonaCollector{},
 }
 
 func LintText(text string) (*ArchitectureModel, []Issue) {

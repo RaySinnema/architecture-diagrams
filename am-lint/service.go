@@ -20,7 +20,7 @@ func (d *DataStoreUse) read(node *yaml.Node) []Issue {
 	issues := make([]Issue, 0)
 	issues = append(issues, d.readDataStore(node, fields)...)
 	issues = append(issues, setDescription(fields, d)...)
-	issues = append(issues, setDataFlow(fields, d)...)
+	issues = append(issues, setDataFlow(node, fields, d)...)
 	return issues
 }
 
@@ -78,15 +78,32 @@ func (f *Form) setState(state State) {
 }
 
 type Service struct {
-	node           *yaml.Node
-	Id             string
-	Name           string
-	DataStores     []*DataStoreUse
-	Forms          []*Form
-	Calls          []*Call
-	TechnologyIds  []string
-	TechnologiesId string
-	State          State
+	node               *yaml.Node
+	Id                 string
+	Name               string
+	DataStores         []*DataStoreUse
+	Forms              []*Form
+	Calls              []*Call
+	TechnologyIds      []string
+	TechnologyBundleId string
+	State              State
+	Technologies       []*Technology
+}
+
+func (s *Service) getNode() *yaml.Node {
+	return s.node
+}
+
+func (s *Service) getTechnologyIds() []string {
+	return s.TechnologyIds
+}
+
+func (s *Service) getTechnologyBundleId() string {
+	return s.TechnologyBundleId
+}
+
+func (s *Service) setTechnologies(technologies []*Technology) {
+	s.Technologies = technologies
 }
 
 func (s *Service) read(id string, node *yaml.Node) []Issue {
@@ -94,8 +111,9 @@ func (s *Service) read(id string, node *yaml.Node) []Issue {
 	fields, issues := namedObject(node, id, s)
 	issues = append(issues, s.readDataStores(fields)...)
 	issues = append(issues, s.readForms(fields)...)
+	issues = append(issues, s.readCalls(fields)...)
 	issues = append(issues, setTechnologies(fields, s)...)
-	issues = append(issues, setState(fields, s)...)
+	issues = append(issues, setState(node, fields, s)...)
 	return issues
 }
 
@@ -127,6 +145,22 @@ func (s *Service) readDataStores(fields map[string]*yaml.Node) []Issue {
 	return issues
 }
 
+func (s *Service) readCalls(fields map[string]*yaml.Node) []Issue {
+	callNodes, _, issue := sequenceFieldOf(fields, "calls")
+	if issue != nil {
+		return []Issue{*issue}
+	}
+	issues := make([]Issue, 0)
+	calls := make([]*Call, 0)
+	for _, callNode := range callNodes {
+		call := Call{}
+		calls = append(calls, &call)
+		issues = append(issues, call.read(callNode)...)
+	}
+	s.Calls = calls
+	return issues
+}
+
 func (s *Service) readForms(fields map[string]*yaml.Node) []Issue {
 	issues := make([]Issue, 0)
 	formMaps, found, issue := mapFieldOf(fields, "forms")
@@ -137,7 +171,7 @@ func (s *Service) readForms(fields map[string]*yaml.Node) []Issue {
 			forms = append(forms, &form)
 			formFields, formIssues := namedObject(formNode, formId, &form)
 			issues = append(issues, formIssues...)
-			issues = append(issues, setState(formFields, &form)...)
+			issues = append(issues, setState(formNode, formFields, &form)...)
 		}
 		s.Forms = forms
 	} else if found {
@@ -166,7 +200,7 @@ func (s *Service) readForms(fields map[string]*yaml.Node) []Issue {
 }
 
 func (s *Service) setTechnologyBundleId(technologyBundle string) {
-	s.TechnologiesId = technologyBundle
+	s.TechnologyBundleId = technologyBundle
 }
 
 func (s *Service) setTechnologyIds(technologies []string) {
@@ -199,5 +233,19 @@ func (s ServiceReader) read(node *yaml.Node, _ string, model *ArchitectureModel)
 		return services[i].Name < services[j].Name
 	})
 	model.Services = services
+	return issues
+}
+
+type ServiceConnector struct {
+}
+
+func (s ServiceConnector) connect(model *ArchitectureModel) []Issue {
+	issues := make([]Issue, 0)
+	for _, service := range model.Services {
+		issues = append(issues, connectTechnologies(service, model)...)
+		for _, call := range service.Calls {
+			issues = append(issues, connectTechnologies(call, model)...)
+		}
+	}
 	return issues
 }

@@ -13,10 +13,15 @@ type Used struct {
 	ExternalSystem   *ExternalSystem
 	FormId           string `yaml:"form,omitempty"`
 	Form             *Form
+	DataFlow         DataFlow
 }
 
 func (u *Used) setDescription(description string) {
 	u.Description = description
+}
+
+func (u *Used) setDataFlow(dataFlow DataFlow) {
+	u.DataFlow = dataFlow
 }
 
 func (u *Used) read(node *yaml.Node) []Issue {
@@ -28,6 +33,7 @@ func (u *Used) read(node *yaml.Node) []Issue {
 	issues := make([]Issue, 0)
 	issues = append(issues, u.readUsed(node, issue, fields)...)
 	issues = append(issues, setDescription(fields, u)...)
+	issues = append(issues, setDataFlow(node, fields, u)...)
 	return issues
 }
 
@@ -53,11 +59,11 @@ func (u *Used) readUsed(node *yaml.Node, issue *Issue, fields map[string]*yaml.N
 	return issues
 }
 
-func (u *Used) Used() *ExternalSystem {
+func (u *Used) Used() interface{} {
 	if u.ExternalSystem != nil {
 		return u.ExternalSystem
 	}
-	return nil
+	return u.Form
 }
 
 type Persona struct {

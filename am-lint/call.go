@@ -13,6 +13,33 @@ type Call struct {
 	ServiceId        string          `yaml:"service,omitempty"`
 	Service          *Service        `yaml:",omitempty"`
 	DataFlow         DataFlow
+	TechnologyIds    []string
+	TechnologiesId   string
+	Technologies     []*Technology
+}
+
+func (c *Call) getNode() *yaml.Node {
+	return c.node
+}
+
+func (c *Call) getTechnologyIds() []string {
+	return c.TechnologyIds
+}
+
+func (c *Call) setTechnologyIds(technologies []string) {
+	c.TechnologyIds = technologies
+}
+
+func (c *Call) getTechnologyBundleId() string {
+	return c.TechnologiesId
+}
+
+func (c *Call) setTechnologyBundleId(technologyBundle string) {
+	c.TechnologiesId = technologyBundle
+}
+
+func (c *Call) setTechnologies(technologies []*Technology) {
+	c.Technologies = technologies
 }
 
 func (c *Call) setDescription(description string) {
@@ -35,7 +62,8 @@ func (c *Call) read(node *yaml.Node) []Issue {
 	issues := make([]Issue, 0)
 	issues = append(issues, c.readCallee(node, issue, fields)...)
 	issues = append(issues, setDescription(fields, c)...)
-	issues = append(issues, setDataFlow(fields, c)...)
+	issues = append(issues, setDataFlow(node, fields, c)...)
+	issues = append(issues, setTechnologies(fields, c)...)
 	return issues
 }
 
@@ -61,9 +89,9 @@ func (c *Call) readCallee(node *yaml.Node, issue *Issue, fields map[string]*yaml
 	return issues
 }
 
-func (c *Call) Callee() *ExternalSystem {
-	if c.ExternalSystem != nil {
-		return c.ExternalSystem
+func (c *Call) Callee() interface{} {
+	if c.Service != nil {
+		return c.Service
 	}
-	return nil
+	return c.ExternalSystem
 }

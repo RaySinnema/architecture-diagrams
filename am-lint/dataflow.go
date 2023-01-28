@@ -16,11 +16,11 @@ type DataProcessor interface {
 	setDataFlow(dataFlow DataFlow)
 }
 
-func setDataFlow(fields map[string]*yaml.Node, dataProcessor DataProcessor) []Issue {
+func setDataFlow(owner *yaml.Node, fields map[string]*yaml.Node, dataProcessor DataProcessor) []Issue {
 	const defaultDataFlow = "bidirectional"
 	var allowedDataFlows = []string{"send", "receive", defaultDataFlow}
 
-	value, issue := enumFieldOf(fields, "dataFlow", allowedDataFlows, defaultDataFlow)
+	value, issue := enumFieldOf(owner, fields, "dataFlow", allowedDataFlows, defaultDataFlow)
 	if issue != nil {
 		return []Issue{*issue}
 	}
