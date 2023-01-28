@@ -1,6 +1,9 @@
 package main
 
+import "gopkg.in/yaml.v3"
+
 type ArchitectureModel struct {
+	node              *yaml.Node
 	Version           string
 	System            System
 	Personas          []*Persona

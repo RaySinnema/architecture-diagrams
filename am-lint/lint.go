@@ -28,6 +28,10 @@ var connectors = []Connector{
 	PersonaCollector{},
 }
 
+var validators = []Validator{
+	PersonaValidator{},
+}
+
 func LintText(text string) (*ArchitectureModel, []Issue) {
 	model, issues := lint(text, "")
 	return model, issues
@@ -43,7 +47,7 @@ func lint(definition string, fileName string) (model *ArchitectureModel, issues 
 		node = *node.Content[0]
 	}
 
-	model = &ArchitectureModel{}
+	model = &ArchitectureModel{node: &node}
 	issues = make([]Issue, 0)
 	children, _ := toMap(&node)
 	for tag, child := range children {
@@ -61,6 +65,9 @@ func lint(definition string, fileName string) (model *ArchitectureModel, issues 
 	}
 	for _, connector := range connectors {
 		issues = append(issues, connector.connect(model)...)
+	}
+	for _, validator := range validators {
+		issues = append(issues, validator.validate(model)...)
 	}
 	return
 }

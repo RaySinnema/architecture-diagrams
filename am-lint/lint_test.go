@@ -911,3 +911,19 @@ func TestInvalidTechnologyBundle(t *testing.T) {
 `, error: "Unknown technology 'bar'"},
 	})
 }
+
+func TestModelValidation(t *testing.T) {
+	assertWarningsForInvalidDefinitions(t, []InvalidDefinition{
+		{definition: ``, error: "At least one persona is required"},
+	})
+}
+
+func assertWarningsForInvalidDefinitions(t *testing.T, cases []InvalidDefinition) {
+	for _, c := range cases {
+		_, issues := LintText(c.definition)
+
+		if !hasIssue(issues, hasWarning(c.error)) {
+			t.Errorf("Missing warning '%v' for invalid definition '%v'\n\nInstead, got: %+v", c.error, c.definition, issues)
+		}
+	}
+}

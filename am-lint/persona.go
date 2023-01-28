@@ -169,3 +169,14 @@ func (c PersonaCollector) connectUsed(used *Used, model *ArchitectureModel) []Is
 	}
 	return issues
 }
+
+type PersonaValidator struct {
+}
+
+func (v PersonaValidator) validate(model *ArchitectureModel) []Issue {
+	issues := make([]Issue, 0)
+	if len(model.Personas) == 0 {
+		issues = append(issues, *NodeWarning("At least one persona is required", model.node))
+	}
+	return issues
+}
