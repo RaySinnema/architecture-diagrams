@@ -35,7 +35,7 @@ func setName(fields map[string]*yaml.Node, nameable Nameable, id string) []Issue
 
 func friendlyNameFrom(value string) string {
 	ext := filepath.Ext(value)
-	name := strings.TrimSuffix(value, ext)
+	name := strings.TrimSuffix(filepath.Base(value), ext)
 	name = strings.Replace(name, "-", " ", -1)
 	if len(name) > 0 {
 		runes := []rune(name)

@@ -16,6 +16,7 @@ var readers = map[string]ModelPartReader{
 	"technologyBundles": TechnologyBundleReader{},
 	"technologies":      TechnologyReader{},
 	"version":           VersionReader{},
+	"workflows":         WorkflowReader{},
 }
 
 var connectors = []Connector{
@@ -26,10 +27,12 @@ var connectors = []Connector{
 	ServiceConnector{},
 	ExternalSystemConnector{},
 	PersonaCollector{},
+	WorkflowCollector{},
 }
 
 var validators = []Validator{
 	PersonaValidator{},
+	ServiceValidator{},
 }
 
 func LintText(text string) (*ArchitectureModel, []Issue) {
@@ -66,8 +69,10 @@ func lint(definition string, fileName string) (model *ArchitectureModel, issues 
 	for _, connector := range connectors {
 		issues = append(issues, connector.connect(model)...)
 	}
-	for _, validator := range validators {
-		issues = append(issues, validator.validate(model)...)
+	if len(issues) == 0 {
+		for _, validator := range validators {
+			issues = append(issues, validator.validate(model)...)
+		}
 	}
 	return
 }

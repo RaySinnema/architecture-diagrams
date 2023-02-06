@@ -73,6 +73,10 @@ type Persona struct {
 	Uses []*Used
 }
 
+func (p *Persona) Print(printer *Printer) {
+	printer.PrintLn(p.Name)
+}
+
 func (p *Persona) setNode(node *yaml.Node) {
 	p.node = node
 }

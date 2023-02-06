@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"gopkg.in/yaml.v3"
 	"sort"
 )
@@ -81,13 +82,26 @@ type Service struct {
 	node               *yaml.Node
 	Id                 string
 	Name               string
+	Description        string
 	DataStores         []*DataStoreUse
+	Views              []string
 	Forms              []*Form
 	Calls              []*Call
 	TechnologyIds      []string
 	TechnologyBundleId string
 	State              State
 	Technologies       []*Technology
+}
+
+func (s *Service) Print(printer *Printer) {
+	printer.Print(s.Name)
+	s.State.Print(printer)
+	PrintTechnologies(s.Technologies, printer)
+	printer.NewLine()
+}
+
+func (s *Service) setDescription(description string) {
+	s.Description = description
 }
 
 func (s *Service) getNode() *yaml.Node {
@@ -110,8 +124,10 @@ func (s *Service) read(id string, node *yaml.Node) []Issue {
 	var fields map[string]*yaml.Node
 	fields, issues := namedObject(node, id, s)
 	issues = append(issues, s.readDataStores(fields)...)
+	issues = append(issues, s.readViews(fields)...)
 	issues = append(issues, s.readForms(fields)...)
 	issues = append(issues, s.readCalls(fields)...)
+	issues = append(issues, setDescription(fields, s)...)
 	issues = append(issues, setTechnologies(fields, s)...)
 	issues = append(issues, setState(node, fields, s)...)
 	return issues
@@ -199,6 +215,26 @@ func (s *Service) readForms(fields map[string]*yaml.Node) []Issue {
 	return issues
 }
 
+func (s *Service) readViews(fields map[string]*yaml.Node) []Issue {
+	issues := make([]Issue, 0)
+	viewNodes, _, issue := sequenceFieldOf(fields, "views")
+	if issue == nil {
+		views := make([]string, 0)
+		for _, viewNode := range viewNodes {
+			name, issue := toString(viewNode, "view")
+			if issue == nil {
+				views = append(views, name)
+			} else {
+				issues = append(issues, *issue)
+			}
+		}
+		s.Views = views
+	} else {
+		issues = append(issues, *issue)
+	}
+	return issues
+}
+
 func (s *Service) setTechnologyBundleId(technologyBundle string) {
 	s.TechnologyBundleId = technologyBundle
 }
@@ -209,6 +245,24 @@ func (s *Service) setTechnologyIds(technologies []string) {
 
 func (s *Service) setState(state State) {
 	s.State = state
+}
+
+func (s *Service) findFormById(id string) (*Form, bool) {
+	for _, form := range s.Forms {
+		if form.Id == id {
+			return form, true
+		}
+	}
+	return nil, false
+}
+
+func (s *Service) hasView(view string) bool {
+	for _, candidate := range s.Views {
+		if candidate == view {
+			return true
+		}
+	}
+	return false
 }
 
 type ServiceReader struct {
@@ -247,5 +301,50 @@ func (s ServiceConnector) connect(model *ArchitectureModel) []Issue {
 			issues = append(issues, connectTechnologies(call, model)...)
 		}
 	}
+	return issues
+}
+
+type ServiceValidator struct {
+}
+
+func (s ServiceValidator) validate(model *ArchitectureModel) []Issue {
+	issues := make([]Issue, 0)
+	issues = append(issues, s.validateFormsAreUnique(model.Services)...)
+	issues = append(issues, s.validateViewsAreUnique(model.Services)...)
+	return issues
+}
+
+func (s ServiceValidator) validateFormsAreUnique(services []*Service) []Issue {
+	issues := make([]Issue, 0)
+	forms := map[string]string{}
+	for _, service := range services {
+		for _, form := range service.Forms {
+			owner, found := forms[form.Id]
+			if found {
+				issues = append(issues, *NodeError(fmt.Sprintf("Form '%v' is already defined in service '%v'",
+					form.Id, owner), service.node))
+			} else {
+				forms[form.Id] = service.Id
+			}
+		}
+	}
+	return issues
+}
+
+func (s ServiceValidator) validateViewsAreUnique(services []*Service) []Issue {
+	issues := make([]Issue, 0)
+	views := map[string]string{}
+	for _, service := range services {
+		for _, view := range service.Views {
+			owner, found := views[view]
+			if found {
+				issues = append(issues, *NodeError(fmt.Sprintf("View '%v' is already defined in service '%v'",
+					view, owner), service.node))
+			} else {
+				views[view] = service.Id
+			}
+		}
+	}
+
 	return issues
 }

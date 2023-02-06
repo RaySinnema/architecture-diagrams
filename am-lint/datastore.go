@@ -19,6 +19,13 @@ type DataStore struct {
 	ApiTechnologies       []*Technology
 }
 
+func (s *DataStore) Print(printer *Printer) {
+	printer.Print(s.Name)
+	s.State.Print(printer)
+	PrintTechnologies(s.Technologies, printer)
+	printer.NewLine()
+}
+
 func (s *DataStore) getNode() *yaml.Node {
 	return s.node
 }

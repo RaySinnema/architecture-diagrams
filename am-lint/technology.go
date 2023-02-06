@@ -15,6 +15,18 @@ type Implementable interface {
 	setTechnologies([]*Technology)
 }
 
+func PrintTechnologies(technologies []*Technology, printer *Printer) {
+	if len(technologies) > 0 {
+		printer.Print(" [")
+		prefix := ""
+		for _, tech := range technologies {
+			printer.Print(prefix, tech.Name)
+			prefix = ", "
+		}
+		printer.Print("]")
+	}
+}
+
 func setTechnologies(fields map[string]*yaml.Node, implementable Implementable) []Issue {
 	return setTechnologiesFrom(fields, "technologies", implementable)
 }
@@ -235,15 +247,6 @@ func (c TechnologyBundleConnector) resolveTechnologies(bundle *TechnologyBundle,
 	return issues
 }
 
-func lookUpTechnologyBundle(model *ArchitectureModel, id string) (*TechnologyBundle, bool) {
-	for _, candidate := range model.TechnologyBundles {
-		if id == candidate.Id {
-			return candidate, true
-		}
-	}
-	return nil, false
-}
-
 func appendUnique(existing []*Technology, toAdd []*Technology) []*Technology {
 	result := make([]*Technology, 0)
 	result = append(result, existing...)
@@ -298,7 +301,7 @@ func addTechnologies(implementable Implementable, model *ArchitectureModel, id s
 }
 
 func technologiesById(owner *yaml.Node, id string, model *ArchitectureModel) ([]*Technology, *Issue) {
-	bundle, found := lookUpTechnologyBundle(model, id)
+	bundle, found := model.findTechnologyBundleById(id)
 	if found {
 		return bundle.Technologies, nil
 	}

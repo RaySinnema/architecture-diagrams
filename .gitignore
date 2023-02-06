@@ -1,3 +1,4 @@
 .idea/
 *.iml
 /am-lint/am-lint
+/examples/gdpr-middleware.yaml

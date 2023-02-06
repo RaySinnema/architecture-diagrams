@@ -12,10 +12,25 @@ const (
 	Warning
 )
 
+func (l Level) String() string {
+	switch l {
+	case Error:
+		return "Error"
+	case Warning:
+		return "Warning"
+	default:
+		panic(fmt.Sprintf("Unknown level %v", int64(l)))
+	}
+}
+
 type Issue struct {
 	Level        Level
 	Message      string
 	Line, Column int
+}
+
+func (i Issue) String() string {
+	return fmt.Sprintf("[%v, %v]: %v - %v", i.Line, i.Column, i.Level, i.Message)
 }
 
 func FileError(message string) *Issue {

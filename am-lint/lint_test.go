@@ -507,6 +507,7 @@ func TestService(t *testing.T) {
 	definition := `services:
   form:
     name: Privacy Form
+    description: Publicly accessible for to submit privacy requests for any of our sites
     state: emerging
     technologies:
       - spring
@@ -711,6 +712,31 @@ func TestInvalidService(t *testing.T) {
   foo:
     state: weird
 `, error: "Invalid state: must be one of 'ok', 'emerging', 'review', 'revision', 'legacy', or 'deprecated'"},
+		{definition: `services:
+  foo:
+    forms:
+      - bar
+  baz:
+    forms:
+      - bar
+`, error: "Form 'bar' is already defined in service 'baz'"},
+		{definition: `services:
+  foo:
+    views:
+      - bar
+  baz:
+    views:
+      - bar
+`, error: "View 'bar' is already defined in service 'baz'"},
+		{definition: `services:
+  foo:
+    views:
+      - bar: baz
+`, error: "view must be a string"},
+		{definition: `services:
+  foo:
+    views: bar
+`, error: "views must be a sequence"},
 	})
 }
 
@@ -926,4 +952,307 @@ func assertWarningsForInvalidDefinitions(t *testing.T, cases []InvalidDefinition
 			t.Errorf("Missing warning '%v' for invalid definition '%v'\n\nInstead, got: %+v", c.error, c.definition, issues)
 		}
 	}
+}
+
+func TestWorkflowSteps(t *testing.T) {
+	definition := `workflows:
+  register:
+    name: Guest registers with hotel
+    steps:
+      - performer: guest            
+        form: registrationForm
+        description: Guest enters data in registration form
+      - performer: registrationForm 
+        command: Register
+      - performer: auth             
+        event: Registered
+  ape:
+    description: Dummy
+
+personas:
+  guest:
+    name: Guest
+
+services:
+  auth:
+    name: Authentication
+  registration:
+    forms:
+      - registrationForm
+`
+
+	model, issues := LintText(definition)
+
+	if len(model.Workflows) != 2 {
+		t.Fatalf("Invalid # workflows: %v", issues)
+	}
+	if model.Workflows[1].Name != "Guest registers with hotel" {
+		t.Fatalf("Workflows not sorted: %+v", model.Workflows)
+	}
+	registration := model.Workflows[1]
+	if len(registration.Steps) != 3 {
+		t.Fatalf("Invalid # steps: %+v", registration)
+	}
+	if registration.Steps[0].Form == nil {
+		t.Errorf("Failed to resolve form: %+v", registration.Steps[0])
+	}
+}
+
+func TestSubWorkflow(t *testing.T) {
+	definition := `workflows:
+  main:
+    steps:
+      - performer: user
+        form: entry
+      - workflow: intermediate
+      - performer: user
+        form: entry
+  intermediate:
+    steps:
+      - workflow: leaf
+  leaf:
+    steps:
+      - performer: user
+        form: entry
+      - performer: user
+        form: entry
+`
+
+	model, issues := LintText(definition)
+
+	if len(model.Workflows) != 3 {
+		t.Fatalf("Invalid # workflows: %v", issues)
+	}
+	if model.Workflows[2].Name != "Main" {
+		t.Fatalf("Workflows not sorted: %+v", model.Workflows)
+	}
+	main := model.Workflows[2]
+	if len(main.Steps) != 4 {
+		t.Fatalf("Sub-workflows not resolved: %+v", main)
+	}
+}
+
+func TestWorkflowStepPerformers(t *testing.T) {
+	definition := `workflows:
+  w:
+    name: Workflow
+    steps:
+      - performer: p
+        externalSystem: es
+      - performer: es
+        service: s
+      - performer: s
+        view: v
+      - performer: s
+        command: c
+      - performer: es
+        command: c
+      - performer: s
+        service: s2
+      - performer: s
+        externalSystem: s
+
+personas:
+  p:
+    name: Persona
+
+externalSystems:
+  es:
+    name: External System
+
+services:
+  s:
+    name: Service
+    views:
+      - v
+  s2:
+    name: Service2
+`
+
+	model, _ := LintText(definition)
+	workflow := model.Workflows[0]
+
+	step := workflow.Steps[0]
+	if step.Performer != model.Personas[0] {
+		t.Errorf("Failed to resolve persona as performer")
+	}
+	if step.ExternalSystem != model.ExternalSystems[0] {
+		t.Errorf("Failed to resolve external system used by persona")
+	}
+
+	step = workflow.Steps[1]
+	if step.Performer != model.ExternalSystems[0] {
+		t.Errorf("Failed to resolve external system as performer")
+	}
+	if step.Service != model.Services[0] {
+		t.Errorf("Failed to resolve service called in step")
+	}
+
+	step = workflow.Steps[2]
+	if step.Performer != model.Services[0] {
+		t.Errorf("Failed to resolve service as performer")
+	}
+
+	step = workflow.Steps[3]
+	if step.Performer != model.Services[0] {
+		t.Errorf("Failed to resolve service issuing command")
+	}
+
+	step = workflow.Steps[4]
+	if step.Performer != model.ExternalSystems[0] {
+		t.Errorf("Failed to resolve external system issuing command")
+	}
+
+	step = workflow.Steps[5]
+	if step.Performer != model.Services[0] {
+		t.Errorf("Failed to resolve service called by other service")
+	}
+
+	step = workflow.Steps[6]
+	if step.Performer != model.Services[0] {
+		t.Errorf("Failed to resolve service called by external system")
+	}
+}
+
+func TestInvalidWorkflow(t *testing.T) {
+	assertErrorsForInvalidDefinitions(t, []InvalidDefinition{
+		{definition: `workflows:
+  - foo`, error: "Expected a map"},
+		{definition: `workflows:
+  foo:
+    steps: bar
+`, error: "steps must be a sequence"},
+		{definition: `workflows:
+  foo:
+    steps:
+      - bar
+`, error: "Expected a map"},
+		{definition: `workflows:
+  foo:
+    steps:
+      - workflow:
+          bar: baz
+`, error: "workflow must be a string"},
+		{definition: `workflows:
+  foo:
+    steps:
+      - performer: bar
+        form: baz
+`, error: "Unknown form 'baz'"},
+		{definition: `workflows:
+  foo:
+    steps:
+      - performer: bar
+        form:
+          - baz
+`, error: "form must be a string"},
+		{definition: `workflows:
+  foo:
+    steps:
+      - performer: bar
+        view:
+          - baz
+`, error: "view must be a string"},
+		{definition: `workflows:
+  foo:
+    steps:
+      - performer: bar
+        command:
+          - baz
+`, error: "command must be a string"},
+		{definition: `workflows:
+  foo:
+    steps:
+      - performer: bar
+        service:
+          - baz
+`, error: "service must be a string"},
+		{definition: `workflows:
+  foo:
+    steps:
+      - performer: bar
+        externalSystem:
+          - baz
+`, error: "externalSystem must be a string"},
+		{definition: `workflows:
+  foo:
+    steps:
+      - performer: bar
+        event:
+          - baz
+`, error: "event must be a string"},
+		{definition: `workflows:
+  foo:
+    steps:
+      - workflow: bar
+`, error: "Unknown workflow 'bar'"},
+		{definition: `workflows:
+  foo:
+    steps:
+      - service: bar
+        performer: baz
+`, error: "Unknown service 'bar'"},
+		{definition: `workflows:
+  foo:
+    steps:
+      - externalSystem: bar
+        performer: baz
+`, error: "Unknown external system 'bar'"},
+		{definition: `workflows:
+  foo:
+    steps:
+      - performer:
+          - bar
+`, error: "performer must be a string"},
+		{definition: `workflows:
+  foo:
+    steps:
+      - performer: bar
+`, error: "Need one of command, event, externalSystem, form, service, or view"},
+		{definition: `workflows:
+  foo:
+    steps:
+      - performer: bar
+        form: gnu
+        service: gnat
+`, error: "Need exactly one of command, event, externalSystem, form, service, or view"},
+		{definition: `workflows:
+  foo:
+    steps:
+      - description: bar
+`, error: "step needs a performer"},
+		{definition: `workflows:
+  foo:
+    steps:
+      - description: bar
+`, error: "step needs a performer"},
+		{definition: `workflows:
+  foo:
+    steps:
+      - performer: bar
+        view: baz
+`, error: "Unknown service 'bar'"},
+		{definition: `workflows:
+  foo:
+    steps:
+      - performer: bar
+        view: baz
+
+services:
+  bar:
+    description: gnu
+`, error: "Service 'bar' doesn't have view 'baz'"},
+		{definition: `workflows:
+  foo:
+    steps:
+      - performer: bar
+        command: baz
+`, error: "Unknown form, service, or external system 'bar'"},
+		{definition: `workflows:
+  foo:
+    steps:
+      - performer: bar
+        event: baz
+`, error: "Unknown service 'bar'"},
+	})
 }

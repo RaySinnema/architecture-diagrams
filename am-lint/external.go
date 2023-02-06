@@ -14,6 +14,14 @@ type ExternalSystem struct {
 	Calls []*Call
 }
 
+func (es *ExternalSystem) Print(printer *Printer) {
+	printer.Print(es.Name)
+	if es.Type != "" {
+		printer.Print(" (", es.Type, ")")
+	}
+	printer.NewLine()
+}
+
 func (es *ExternalSystem) setNode(node *yaml.Node) {
 	es.node = node
 }

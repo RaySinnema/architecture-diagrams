@@ -1,6 +1,9 @@
 package main
 
-import "gopkg.in/yaml.v3"
+import (
+	"fmt"
+	"gopkg.in/yaml.v3"
+)
 
 type State int64
 
@@ -12,6 +15,32 @@ const (
 	Legacy
 	Deprecated
 )
+
+func (s State) String() string {
+	switch s {
+	case Ok:
+		return "OK"
+	case Emerging:
+		return "emerging"
+	case Review:
+		return "review"
+	case Revision:
+		return "revision"
+	case Legacy:
+		return "legacy"
+	case Deprecated:
+		return "deprecated"
+	default:
+		panic(fmt.Sprintf("Unknown state: %v", int64(s)))
+	}
+}
+
+func (s State) Print(printer *Printer) {
+	if s != Ok {
+		printer.Print(" (", s, ")")
+	}
+
+}
 
 type Evolvable interface {
 	setState(state State)
