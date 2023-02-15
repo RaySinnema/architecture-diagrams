@@ -12,6 +12,7 @@ type Implementable interface {
 	setTechnologyIds(technologies []string)
 	getTechnologyBundleId() string
 	setTechnologyBundleId(technologyBundle string)
+	getTechnologies() []*Technology
 	setTechnologies([]*Technology)
 }
 

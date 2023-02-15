@@ -3,6 +3,7 @@ package main
 import "gopkg.in/yaml.v3"
 
 type Describable interface {
+	getDescription() string
 	setDescription(description string)
 }
 

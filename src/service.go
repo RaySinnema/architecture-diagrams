@@ -47,6 +47,10 @@ func (d *DataStoreUse) readDataStore(node *yaml.Node, fields map[string]*yaml.No
 	return issues
 }
 
+func (d *DataStoreUse) getDescription() string {
+	return d.Description
+}
+
 func (d *DataStoreUse) setDescription(description string) {
 	d.Description = description
 }
@@ -100,6 +104,10 @@ func (s *Service) Print(printer *Printer) {
 	printer.NewLine()
 }
 
+func (s *Service) getDescription() string {
+	return s.Description
+}
+
 func (s *Service) setDescription(description string) {
 	s.Description = description
 }
@@ -114,6 +122,10 @@ func (s *Service) getTechnologyIds() []string {
 
 func (s *Service) getTechnologyBundleId() string {
 	return s.TechnologyBundleId
+}
+
+func (s *Service) getTechnologies() []*Technology {
+	return s.Technologies
 }
 
 func (s *Service) setTechnologies(technologies []*Technology) {

@@ -16,6 +16,10 @@ type Used struct {
 	DataFlow         DataFlow
 }
 
+func (u *Used) getDescription() string {
+	return u.Description
+}
+
 func (u *Used) setDescription(description string) {
 	u.Description = description
 }
@@ -67,10 +71,11 @@ func (u *Used) Used() interface{} {
 }
 
 type Persona struct {
-	node *yaml.Node
-	Id   string
-	Name string
-	Uses []*Used
+	node        *yaml.Node
+	Id          string
+	Name        string
+	Description string
+	Uses        []*Used
 }
 
 func (p *Persona) Print(printer *Printer) {
@@ -81,17 +86,26 @@ func (p *Persona) setNode(node *yaml.Node) {
 	p.node = node
 }
 
+func (p *Persona) setId(id string) {
+	p.Id = id
+}
+
 func (p *Persona) setName(name string) {
 	p.Name = name
 }
 
-func (p *Persona) setId(id string) {
-	p.Id = id
+func (p *Persona) getDescription() string {
+	return p.Description
+}
+
+func (p *Persona) setDescription(description string) {
+	p.Description = description
 }
 
 func (p *Persona) read(id string, node *yaml.Node) []Issue {
 	var fields map[string]*yaml.Node
 	fields, issues := namedObject(node, id, p)
+	issues = append(issues, setDescription(fields, p)...)
 	useNodes, found, issue := sequenceFieldOf(fields, "uses")
 	if issue != nil {
 		return append(issues, *issue)

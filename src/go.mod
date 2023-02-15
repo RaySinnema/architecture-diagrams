@@ -1,4 +1,4 @@
-module am-lint
+module name.sinnema/archmodel
 
 go 1.19
 

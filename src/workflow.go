@@ -23,6 +23,10 @@ type Step struct {
 	View             string
 }
 
+func (s *Step) getDescription() string {
+	return s.Description
+}
+
 func (s *Step) setDescription(description string) {
 	s.Description = description
 }
@@ -148,6 +152,10 @@ func (w *Workflow) setId(id string) {
 
 func (w *Workflow) setName(name string) {
 	w.Name = name
+}
+
+func (w *Workflow) getDescription() string {
+	return w.Description
 }
 
 func (w *Workflow) setDescription(description string) {

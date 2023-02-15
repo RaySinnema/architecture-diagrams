@@ -18,6 +18,11 @@ type Call struct {
 	Technologies     []*Technology
 }
 
+func (c *Call) getTechnologies() []*Technology {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (c *Call) getNode() *yaml.Node {
 	return c.node
 }
@@ -40,6 +45,10 @@ func (c *Call) setTechnologyBundleId(technologyBundle string) {
 
 func (c *Call) setTechnologies(technologies []*Technology) {
 	c.Technologies = technologies
+}
+
+func (c *Call) getDescription() string {
+	return c.Description
 }
 
 func (c *Call) setDescription(description string) {

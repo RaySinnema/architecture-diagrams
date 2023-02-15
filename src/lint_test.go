@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -1255,4 +1256,43 @@ services:
         event: baz
 `, error: "Unknown service 'bar'"},
 	})
+}
+
+func TestExamples(t *testing.T) {
+	dir := "../examples"
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		fmt.Printf("Can't read examples: %v\n", err)
+		return
+	}
+	found := false
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		if !strings.HasSuffix(entry.Name(), ".yaml") {
+			continue
+		}
+		found = true
+		testExample(t, fmt.Sprintf("%s/%s", dir, entry.Name()))
+	}
+	if !found {
+		fmt.Println("No examples found")
+	}
+}
+
+func testExample(t *testing.T, fileName string) {
+	model, issues := LintFile(fileName)
+
+	if len(issues) > 0 {
+		fmt.Println("Issues:")
+		for _, issue := range issues {
+			fmt.Println(issue)
+		}
+		fmt.Println("")
+		t.Fatalf("Found issues in example %v", fileName)
+	}
+	if model == nil {
+		t.Fatalf("No model for example %v", fileName)
+	}
 }

@@ -7,11 +7,12 @@ import (
 )
 
 type ExternalSystem struct {
-	node  *yaml.Node
-	Id    string
-	Name  string
-	Type  string
-	Calls []*Call
+	node        *yaml.Node
+	Id          string
+	Name        string
+	Description string
+	Type        string
+	Calls       []*Call
 }
 
 func (es *ExternalSystem) Print(printer *Printer) {
@@ -34,9 +35,18 @@ func (es *ExternalSystem) setName(name string) {
 	es.Name = name
 }
 
+func (es *ExternalSystem) getDescription() string {
+	return es.Description
+}
+
+func (es *ExternalSystem) setDescription(description string) {
+	es.Description = description
+}
+
 func (es *ExternalSystem) read(id string, node *yaml.Node) []Issue {
 	var fields map[string]*yaml.Node
 	fields, issues := namedObject(node, id, es)
+	issues = append(issues, setDescription(fields, es)...)
 	issues = append(issues, es.readType(fields)...)
 	issues = append(issues, es.readCalls(fields)...)
 	return issues

@@ -38,6 +38,10 @@ func (s *DataStore) getTechnologyBundleId() string {
 	return s.TechnologyBundleId
 }
 
+func (s *DataStore) getTechnologies() []*Technology {
+	return s.Technologies
+}
+
 func (s *DataStore) setTechnologies(technologies []*Technology) {
 	s.Technologies = technologies
 }
@@ -52,6 +56,10 @@ func (s *DataStore) setId(id string) {
 
 func (s *DataStore) setName(name string) {
 	s.Name = name
+}
+
+func (s *DataStore) getDescription() string {
+	return s.Description
 }
 
 func (s *DataStore) setDescription(description string) {
@@ -84,6 +92,10 @@ func (a ApiTechnologies) getTechnologyIds() []string {
 
 func (a ApiTechnologies) getTechnologyBundleId() string {
 	return a.dataStore.ApiTechnologyBundleId
+}
+
+func (a ApiTechnologies) getTechnologies() []*Technology {
+	return a.dataStore.Technologies
 }
 
 func (a ApiTechnologies) setTechnologies(technologies []*Technology) {
