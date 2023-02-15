@@ -6,6 +6,12 @@ import (
 
 const idOfSystemOfInterest = "system"
 
+type usage struct {
+	user        string
+	used        string
+	description string
+}
+
 func GenerateC4(model *ArchitectureModel, fileName string) error {
 	printer := NewPrinter()
 	printC4workspace(model, printer)
@@ -25,13 +31,18 @@ func printC4workspace(model *ArchitectureModel, printer *Printer) {
 func printC4model(model *ArchitectureModel, printer *Printer) {
 	printer.PrintLn("model {")
 	printer.Start()
-	printPersons(model, printer)
-	printSoftwareSystems(model, printer)
+
+	usages := make([]usage, 0)
+	usages = append(usages, printPersons(model, printer)...)
+	usages = append(usages, printSoftwareSystems(model, printer)...)
+	printUsages(usages, printer)
+
 	printer.End()
 	printer.PrintLn("}")
 }
 
-func printPersons(model *ArchitectureModel, printer *Printer) {
+func printPersons(model *ArchitectureModel, printer *Printer) []usage {
+	usages := make([]usage, 0)
 	for _, persona := range model.Personas {
 		printer.PrintLn(persona.Id, " = person \"", persona.Name, "\" {")
 		printer.Start()
@@ -39,15 +50,16 @@ func printPersons(model *ArchitectureModel, printer *Printer) {
 		printedSystemOfInterest := false
 		for _, used := range persona.Uses {
 			if used.ExternalSystemId != "" {
-				printUses(used.ExternalSystemId, used.Description, printer)
+				usages = append(usages, usage{persona.Id, used.ExternalSystemId, used.Description})
 			} else if !printedSystemOfInterest {
 				printedSystemOfInterest = true
-				printUses(idOfSystemOfInterest, used.Description, printer)
+				usages = append(usages, usage{persona.Id, idOfSystemOfInterest, used.Description})
 			}
 		}
 		printer.End()
 		printer.PrintLn("}")
 	}
+	return usages
 }
 
 func printDescription(describable Describable, printer *Printer) {
@@ -56,44 +68,42 @@ func printDescription(describable Describable, printer *Printer) {
 	}
 }
 
-func printUses(id string, description string, printer *Printer) {
-	printer.Print("-> ", id)
-	if description != "" {
-		printer.Print(" \"", description, "\"")
-	}
-	printer.NewLine()
+func printSoftwareSystems(model *ArchitectureModel, printer *Printer) []usage {
+	var usages = make([]usage, 0)
+	usages = append(usages, printSoftwareSystemOfInterest(model, printer)...)
+	usages = append(usages, printExternalSystems(model, printer)...)
+	return usages
 }
 
-func printSoftwareSystems(model *ArchitectureModel, printer *Printer) {
-	printSoftwareSystemOfInterest(model, printer)
-	printExternalSystems(model, printer)
-}
-
-func printSoftwareSystemOfInterest(model *ArchitectureModel, printer *Printer) {
+func printSoftwareSystemOfInterest(model *ArchitectureModel, printer *Printer) []usage {
 	printer.PrintLn(idOfSystemOfInterest, " = softwareSystem \"", model.System.Name, "\" {")
 	printer.Start()
-	printContainers(model, printer)
+	usages := printContainers(model, printer)
 	printer.End()
 	printer.PrintLn("}")
+	return usages
 }
 
-func printContainers(model *ArchitectureModel, printer *Printer) {
-	printServices(model.Services, printer)
+func printContainers(model *ArchitectureModel, printer *Printer) []usage {
+	usages := make([]usage, 0)
+	usages = append(usages, printServices(model.Services, printer)...)
 	printDataStores(model.Databases, printer)
 	printDataStores(model.Queues, printer)
+	return usages
 }
 
-func printServices(services []*Service, printer *Printer) {
+func printServices(services []*Service, printer *Printer) []usage {
+	usages := make([]usage, 0)
 	for _, service := range services {
-		printer.PrintLn(service.Id, " container \"", service.Name, "\" {")
+		printer.PrintLn(service.Id, " = container \"", service.Name, "\" {")
 		printer.Start()
 		printDescription(service, printer)
 		printTechnology(service, printer)
 		for _, call := range service.Calls {
 			if call.ExternalSystemId != "" {
-				printUses(call.ExternalSystemId, call.Description, printer)
+				usages = append(usages, usage{service.Id, call.ExternalSystemId, call.Description})
 			} else {
-				printUses(call.ServiceId, call.Description, printer)
+				usages = append(usages, usage{service.Id, call.ServiceId, call.Description})
 			}
 		}
 		for _, dataStore := range service.DataStores {
@@ -101,11 +111,12 @@ func printServices(services []*Service, printer *Printer) {
 			if id == "" {
 				id = dataStore.DatabaseId
 			}
-			printUses(id, dataStore.Description, printer)
+			usages = append(usages, usage{service.Id, id, dataStore.Description})
 		}
 		printer.End()
 		printer.PrintLn("}")
 	}
+	return usages
 }
 
 func printTechnology(implementable Implementable, printer *Printer) {
@@ -133,7 +144,8 @@ func printDataStores(dataStores []*DataStore, printer *Printer) {
 	}
 }
 
-func printExternalSystems(model *ArchitectureModel, printer *Printer) {
+func printExternalSystems(model *ArchitectureModel, printer *Printer) []usage {
+	usages := make([]usage, 0)
 	for _, externalSystem := range model.ExternalSystems {
 		printer.PrintLn(externalSystem.Id, " = softwareSystem \"", externalSystem.Name, "\" {")
 		printer.Start()
@@ -141,14 +153,25 @@ func printExternalSystems(model *ArchitectureModel, printer *Printer) {
 		printedSystemOfInterest := false
 		for _, call := range externalSystem.Calls {
 			if call.ExternalSystemId != "" {
-				printUses(call.ExternalSystemId, call.Description, printer)
+				usages = append(usages, usage{externalSystem.Id, call.ExternalSystemId, call.Description})
 			} else if !printedSystemOfInterest {
 				printedSystemOfInterest = true
-				printUses(idOfSystemOfInterest, call.Description, printer)
+				usages = append(usages, usage{externalSystem.Id, idOfSystemOfInterest, call.Description})
 			}
 		}
 		printer.End()
 		printer.PrintLn("}")
+	}
+	return usages
+}
+
+func printUsages(usages []usage, printer *Printer) {
+	for _, usage := range usages {
+		printer.Print(usage.user, " -> ", usage.used)
+		if usage.description != "" {
+			printer.Print(" \"", usage.description, "\"")
+		}
+		printer.NewLine()
 	}
 }
 
