@@ -8,7 +8,9 @@ import (
 
 type DataStoreUse struct {
 	QueueId     string `yaml:"queue,omitempty"`
+	Queue       *DataStore
 	DatabaseId  string `yaml:"database,omitempty"`
+	Database    *Database
 	Description string
 	DataFlow    DataFlow
 }
@@ -60,10 +62,11 @@ func (d *DataStoreUse) setDataFlow(dataFlow DataFlow) {
 }
 
 type Form struct {
-	node  *yaml.Node
-	Id    string
-	Name  string
-	State State
+	node          *yaml.Node
+	Id            string
+	Name          string
+	State         State
+	ImplementedBy *Service
 }
 
 func (f *Form) setNode(node *yaml.Node) {
@@ -82,13 +85,36 @@ func (f *Form) setState(state State) {
 	f.State = state
 }
 
+type View struct {
+	node          *yaml.Node
+	Id            string
+	Name          string
+	State         State
+	ImplementedBy *Database
+}
+
+func (v *View) setNode(node *yaml.Node) {
+	v.node = node
+}
+
+func (v *View) setId(id string) {
+	v.Id = id
+}
+
+func (v *View) setName(name string) {
+	v.Name = name
+}
+
+func (v *View) setState(state State) {
+	v.State = state
+}
+
 type Service struct {
 	node               *yaml.Node
 	Id                 string
 	Name               string
 	Description        string
 	DataStores         []*DataStoreUse
-	Views              []string
 	Forms              []*Form
 	Calls              []*Call
 	TechnologyIds      []string
@@ -136,7 +162,6 @@ func (s *Service) read(id string, node *yaml.Node) []Issue {
 	var fields map[string]*yaml.Node
 	fields, issues := namedObject(node, id, s)
 	issues = append(issues, s.readDataStores(fields)...)
-	issues = append(issues, s.readViews(fields)...)
 	issues = append(issues, s.readForms(fields)...)
 	issues = append(issues, s.readCalls(fields)...)
 	issues = append(issues, setDescription(fields, s)...)
@@ -227,26 +252,6 @@ func (s *Service) readForms(fields map[string]*yaml.Node) []Issue {
 	return issues
 }
 
-func (s *Service) readViews(fields map[string]*yaml.Node) []Issue {
-	issues := make([]Issue, 0)
-	viewNodes, _, issue := sequenceFieldOf(fields, "views")
-	if issue == nil {
-		views := make([]string, 0)
-		for _, viewNode := range viewNodes {
-			name, issue := toString(viewNode, "view")
-			if issue == nil {
-				views = append(views, name)
-			} else {
-				issues = append(issues, *issue)
-			}
-		}
-		s.Views = views
-	} else {
-		issues = append(issues, *issue)
-	}
-	return issues
-}
-
 func (s *Service) setTechnologyBundleId(technologyBundle string) {
 	s.TechnologyBundleId = technologyBundle
 }
@@ -260,21 +265,25 @@ func (s *Service) setState(state State) {
 }
 
 func (s *Service) findFormById(id string) (*Form, bool) {
-	for _, form := range s.Forms {
-		if form.Id == id {
-			return form, true
+	for _, candidate := range s.Forms {
+		if candidate.Id == id {
+			return candidate, true
 		}
 	}
 	return nil, false
 }
 
-func (s *Service) hasView(view string) bool {
-	for _, candidate := range s.Views {
-		if candidate == view {
-			return true
+func (s *Service) findDatabaseView(view string) (*View, bool) {
+	for _, dataStore := range s.DataStores {
+		if dataStore.Database != nil && dataStore.DataFlow != Receive {
+			for _, candidate := range dataStore.Database.Views {
+				if candidate.Id == view {
+					return candidate, true
+				}
+			}
 		}
 	}
-	return false
+	return nil, false
 }
 
 type ServiceReader struct {
@@ -308,9 +317,41 @@ type ServiceConnector struct {
 func (s ServiceConnector) connect(model *ArchitectureModel) []Issue {
 	issues := make([]Issue, 0)
 	for _, service := range model.Services {
+		for _, form := range service.Forms {
+			form.ImplementedBy = service
+		}
 		issues = append(issues, connectTechnologies(service, model)...)
 		for _, call := range service.Calls {
 			issues = append(issues, connectTechnologies(call, model)...)
+		}
+		issues = append(issues, s.connectDataStores(service, model)...)
+	}
+	return issues
+}
+
+func (s ServiceConnector) connectDataStores(service *Service, model *ArchitectureModel) []Issue {
+	issues := make([]Issue, 0)
+	for _, dataStore := range service.DataStores {
+		if dataStore.DatabaseId != "" {
+			for _, database := range model.Databases {
+				if database.Id == dataStore.DatabaseId {
+					dataStore.Database = database
+					break
+				}
+			}
+			if dataStore.Database == nil {
+				issues = append(issues, *NodeError(fmt.Sprintf("Unknown database '%v'", dataStore.DatabaseId), service.node))
+			}
+		} else if dataStore.QueueId != "" {
+			for _, queue := range model.Queues {
+				if queue.Id == dataStore.QueueId {
+					dataStore.Queue = queue
+					break
+				}
+			}
+			if dataStore.Queue == nil {
+				issues = append(issues, *NodeError(fmt.Sprintf("Unknown queue '%v'", dataStore.QueueId), service.node))
+			}
 		}
 	}
 	return issues
@@ -322,7 +363,6 @@ type ServiceValidator struct {
 func (s ServiceValidator) validate(model *ArchitectureModel) []Issue {
 	issues := make([]Issue, 0)
 	issues = append(issues, s.validateFormsAreUnique(model.Services)...)
-	issues = append(issues, s.validateViewsAreUnique(model.Services)...)
 	return issues
 }
 
@@ -340,23 +380,5 @@ func (s ServiceValidator) validateFormsAreUnique(services []*Service) []Issue {
 			}
 		}
 	}
-	return issues
-}
-
-func (s ServiceValidator) validateViewsAreUnique(services []*Service) []Issue {
-	issues := make([]Issue, 0)
-	views := map[string]string{}
-	for _, service := range services {
-		for _, view := range service.Views {
-			owner, found := views[view]
-			if found {
-				issues = append(issues, *NodeError(fmt.Sprintf("View '%v' is already defined in service '%v'",
-					view, owner), service.node))
-			} else {
-				views[view] = service.Id
-			}
-		}
-	}
-
 	return issues
 }

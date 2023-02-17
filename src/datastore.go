@@ -143,3 +143,35 @@ func (r DataStoreReader) read(node *yaml.Node) ([]*DataStore, []Issue) {
 	})
 	return dataStores, issues
 }
+
+type DataStoreValidator struct {
+}
+
+type DataStoreIdExtractor func(use *DataStoreUse) string
+
+func (d DataStoreValidator) validate(model *ArchitectureModel) []Issue {
+	issues := make([]Issue, 0)
+	for _, database := range model.Databases {
+		if d.isUnused(&database.DataStore, model, func(use *DataStoreUse) string { return use.DatabaseId }) {
+			issues = append(issues, *NodeWarning("Database isn't used", database.node))
+		}
+	}
+	for _, queue := range model.Queues {
+		if d.isUnused(queue, model, func(use *DataStoreUse) string { return use.QueueId }) {
+			issues = append(issues, *NodeWarning("Queue isn't used", queue.node))
+		}
+	}
+	return issues
+}
+
+func (d DataStoreValidator) isUnused(dataStore *DataStore, model *ArchitectureModel, extractor DataStoreIdExtractor) bool {
+	for _, service := range model.Services {
+		for _, use := range service.DataStores {
+			id := extractor(use)
+			if dataStore.Id == id {
+				return false
+			}
+		}
+	}
+	return true
+}

@@ -11,7 +11,7 @@ type ArchitectureModel struct {
 	Personas          []*Persona
 	ExternalSystems   []*ExternalSystem
 	Services          []*Service
-	Databases         []*DataStore
+	Databases         []*Database
 	Queues            []*DataStore
 	Technologies      []*Technology
 	TechnologyBundles []*TechnologyBundle
@@ -150,6 +150,15 @@ func (model ArchitectureModel) findTechnologyBundleById(id string) (*TechnologyB
 
 func (model ArchitectureModel) findWorkflowById(id string) (*Workflow, bool) {
 	for _, candidate := range model.Workflows {
+		if candidate.Id == id {
+			return candidate, true
+		}
+	}
+	return nil, false
+}
+
+func (model ArchitectureModel) findDatabaseById(id string) (*Database, bool) {
+	for _, candidate := range model.Databases {
 		if candidate.Id == id {
 			return candidate, true
 		}

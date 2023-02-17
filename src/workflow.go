@@ -358,15 +358,16 @@ func (w WorkflowCollector) connectCommandPerformer(step *Step, model *Architectu
 		step.PerformerId), step.node)}
 }
 
-func findServiceWithView(node *yaml.Node, id string, view string, model *ArchitectureModel) (*Service, *Issue) {
+func findServiceWithView(node *yaml.Node, id string, viewId string, model *ArchitectureModel) (*Service, *Issue) {
 	service, found := model.findServiceById(id)
 	if !found {
 		return nil, NodeError(fmt.Sprintf("Unknown service '%v'", id), node)
 	}
-	if service.hasView(view) {
+	_, found = service.findDatabaseView(viewId)
+	if found {
 		return service, nil
 	}
-	return nil, NodeError(fmt.Sprintf("Service '%v' doesn't have view '%v'", id, view), node)
+	return nil, NodeError(fmt.Sprintf("Service '%v' doesn't have a database with view '%v'", id, viewId), node)
 }
 
 func (w WorkflowCollector) connectServicePerformer(step *Step, model *ArchitectureModel) []Issue {

@@ -26,11 +26,14 @@ var connectors = []Connector{
 	QueueConnector{},
 	ServiceConnector{},
 	ExternalSystemConnector{},
-	PersonaCollector{},
+	PersonaConnector{},
 	WorkflowCollector{},
 }
 
 var validators = []Validator{
+	DatabaseValidator{},
+	DataStoreValidator{},
+	ExternalSystemValidator{},
 	PersonaValidator{},
 	ServiceValidator{},
 }

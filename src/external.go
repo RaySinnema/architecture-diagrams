@@ -144,3 +144,30 @@ func (c ExternalSystemConnector) connectCall(call *Call, model *ArchitectureMode
 	}
 	return issues
 }
+
+type ExternalSystemValidator struct {
+}
+
+func (e ExternalSystemValidator) validate(model *ArchitectureModel) []Issue {
+	issues := make([]Issue, 0)
+	for _, externalSystem := range model.ExternalSystems {
+		if e.isUnused(externalSystem, model) {
+			issues = append(issues, *NodeWarning("External system isn't used", externalSystem.node))
+		}
+	}
+	return issues
+}
+
+func (e ExternalSystemValidator) isUnused(externalSystem *ExternalSystem, model *ArchitectureModel) bool {
+	if len(externalSystem.Calls) > 0 {
+		return false
+	}
+	for _, service := range model.Services {
+		for _, call := range service.Calls {
+			if call.ExternalSystemId == externalSystem.Id {
+				return false
+			}
+		}
+	}
+	return true
+}

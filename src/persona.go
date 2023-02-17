@@ -13,6 +13,8 @@ type Used struct {
 	ExternalSystem   *ExternalSystem
 	FormId           string `yaml:"form,omitempty"`
 	Form             *Form
+	ViewId           string
+	View             *View
 	DataFlow         DataFlow
 }
 
@@ -51,14 +53,20 @@ func (u *Used) readUsed(node *yaml.Node, issue *Issue, fields map[string]*yaml.N
 	if issue != nil {
 		issues = append(issues, *issue)
 	}
+	viewId, foundView, issue := stringFieldOf(fields, "view")
+	if issue != nil {
+		issues = append(issues, *issue)
+	}
 	if foundExternalSystem && foundForm {
 		issues = append(issues, *NodeError("A persona may use either a form or an external system. Split the into two to have let the persona use both.", node))
 	} else if foundExternalSystem {
 		u.ExternalSystemId = externalSystemId
 	} else if foundForm {
 		u.FormId = formId
+	} else if foundView {
+		u.ViewId = viewId
 	} else {
-		issues = append(issues, *NodeError("A persona must use either a form or an external system", node))
+		issues = append(issues, *NodeError("A persona must use either a form, a view, or an external system", node))
 	}
 	return issues
 }
@@ -111,7 +119,7 @@ func (p *Persona) read(id string, node *yaml.Node) []Issue {
 		return append(issues, *issue)
 	}
 	if !found {
-		return append(issues, *NodeError("A persona must use either a form or an external system", node))
+		return append(issues, *NodeError("A persona must use either a form, a view, or an external system", node))
 	}
 	uses := make([]*Used, 0)
 	for _, useNode := range useNodes {
@@ -148,10 +156,10 @@ func (p PersonaReader) read(node *yaml.Node, _ string, model *ArchitectureModel)
 	return issues
 }
 
-type PersonaCollector struct {
+type PersonaConnector struct {
 }
 
-func (c PersonaCollector) connect(model *ArchitectureModel) []Issue {
+func (c PersonaConnector) connect(model *ArchitectureModel) []Issue {
 	issues := make([]Issue, 0)
 	for _, persona := range model.Personas {
 		for _, use := range persona.Uses {
@@ -161,7 +169,7 @@ func (c PersonaCollector) connect(model *ArchitectureModel) []Issue {
 	return issues
 }
 
-func (c PersonaCollector) connectUsed(used *Used, model *ArchitectureModel) []Issue {
+func (c PersonaConnector) connectUsed(used *Used, model *ArchitectureModel) []Issue {
 	issues := make([]Issue, 0)
 	if used.ExternalSystemId != "" {
 		for _, candidate := range model.ExternalSystems {
@@ -183,6 +191,18 @@ func (c PersonaCollector) connectUsed(used *Used, model *ArchitectureModel) []Is
 		}
 		if used.Form == nil {
 			issues = append(issues, *NodeError(fmt.Sprintf("Unknown form '%v'", used.FormId), used.node))
+		}
+	}
+	if used.ViewId != "" {
+		for _, database := range model.Databases {
+			for _, candidate := range database.Views {
+				if candidate.Id == used.ViewId {
+					used.View = candidate
+				}
+			}
+		}
+		if used.View == nil {
+			issues = append(issues, *NodeError(fmt.Sprintf("Unknown view '%v'", used.ViewId), used.node))
 		}
 	}
 	return issues

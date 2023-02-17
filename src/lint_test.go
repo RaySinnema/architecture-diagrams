@@ -212,7 +212,7 @@ func assertErrorsForInvalidDefinitions(t *testing.T, cases []InvalidDefinition) 
 		_, issues := LintText(c.definition)
 
 		if !hasIssue(issues, hasError(c.error)) {
-			t.Errorf("Missing error '%v' for invalid definition '%v'\n\nInstead, got: %+v", c.error, c.definition, issues)
+			t.Errorf("Missing error `%v` for invalid definition `%v`\n\nInstead, got: %+v", c.error, c.definition, issues)
 		}
 	}
 }
@@ -296,7 +296,7 @@ func TestInvalidPersonas(t *testing.T) {
   dev:
     foo:
       bar: baz
-`, error: "A persona must use either a form or an external system"},
+`, error: "A persona must use either a form, a view, or an external system"},
 		{definition: `personas:
   foo:
     uses:
@@ -324,7 +324,7 @@ func TestInvalidPersonas(t *testing.T) {
   foo:
     uses:
       - description: bar
-`, error: "A persona must use either a form or an external system"},
+`, error: "A persona must use either a form, a view, or an external system"},
 		{definition: `personas:
   foo:
     uses:
@@ -343,6 +343,11 @@ func TestPersonaUsesExternalSystem(t *testing.T) {
 externalSystems:
   bear:
     description: foo
+
+services:
+  cheetah:
+    calls:
+      - externalSystem: bear
 `
 
 	model, issues := LintText(definition)
@@ -721,23 +726,6 @@ func TestInvalidService(t *testing.T) {
     forms:
       - bar
 `, error: "Form 'bar' is already defined in service 'baz'"},
-		{definition: `services:
-  foo:
-    views:
-      - bar
-  baz:
-    views:
-      - bar
-`, error: "View 'bar' is already defined in service 'baz'"},
-		{definition: `services:
-  foo:
-    views:
-      - bar: baz
-`, error: "view must be a string"},
-		{definition: `services:
-  foo:
-    views: bar
-`, error: "views must be a sequence"},
 	})
 }
 
@@ -789,6 +777,23 @@ func TestInvalidDatabase(t *testing.T) {
   - foo
   - bar
 `, error: "Expected a map"},
+		{definition: `databases:
+  foo:
+    views:
+      - bar
+  baz:
+    views:
+      - bar
+`, error: "View 'bar' is already defined in database 'baz'"},
+		{definition: `databases:
+  foo:
+    views:
+      - bar: baz
+`, error: "view must be a string"},
+		{definition: `databases:
+  foo:
+    views: bar
+`, error: "views must be a sequence"},
 	})
 }
 
@@ -1064,10 +1069,17 @@ externalSystems:
 services:
   s:
     name: Service
-    views:
-      - v
+    dataStores:
+      - database: d
   s2:
     name: Service2
+
+databases:
+  d:
+    name: Database
+    views:
+      - v
+
 `
 
 	model, _ := LintText(definition)
@@ -1242,7 +1254,7 @@ func TestInvalidWorkflow(t *testing.T) {
 services:
   bar:
     description: gnu
-`, error: "Service 'bar' doesn't have view 'baz'"},
+`, error: "Service 'bar' doesn't have a database with view 'baz'"},
 		{definition: `workflows:
   foo:
     steps:
