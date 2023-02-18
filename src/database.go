@@ -5,6 +5,30 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type View struct {
+	node  *yaml.Node
+	Id    string
+	Name  string
+	State State
+	On    *Database
+}
+
+func (v *View) setNode(node *yaml.Node) {
+	v.node = node
+}
+
+func (v *View) setId(id string) {
+	v.Id = id
+}
+
+func (v *View) setName(name string) {
+	v.Name = name
+}
+
+func (v *View) setState(state State) {
+	v.State = state
+}
+
 type Database struct {
 	DataStore
 	Views []*View
@@ -33,7 +57,7 @@ func (d *Database) readViews(fields map[string]*yaml.Node) []Issue {
 				view.Id = name
 				view.Name = name
 				view.State = Ok
-				view.ImplementedBy = d
+				view.On = d
 			} else {
 				issues = append(issues, *issue)
 			}

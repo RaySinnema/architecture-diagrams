@@ -85,30 +85,6 @@ func (f *Form) setState(state State) {
 	f.State = state
 }
 
-type View struct {
-	node          *yaml.Node
-	Id            string
-	Name          string
-	State         State
-	ImplementedBy *Database
-}
-
-func (v *View) setNode(node *yaml.Node) {
-	v.node = node
-}
-
-func (v *View) setId(id string) {
-	v.Id = id
-}
-
-func (v *View) setName(name string) {
-	v.Name = name
-}
-
-func (v *View) setState(state State) {
-	v.State = state
-}
-
 type Service struct {
 	node               *yaml.Node
 	Id                 string

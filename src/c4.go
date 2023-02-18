@@ -7,11 +7,10 @@ import (
 const idOfSystemOfInterest = "system"
 
 type usage struct {
-	user          string
-	used          string
-	description   string
-	bidirectional bool
-	byPersona     bool
+	user        string
+	used        string
+	description string
+	byPersona   bool
 }
 
 func GenerateC4(model *ArchitectureModel, fileName string) error {
@@ -51,11 +50,11 @@ func printPersons(model *ArchitectureModel, printer *Printer) []usage {
 		printDescription(persona, printer)
 		for _, used := range persona.Uses {
 			if used.ExternalSystem != nil {
-				usages = append(usages, usage{persona.Id, used.ExternalSystem.Id, used.Description, false, true})
+				usages = append(usages, usage{persona.Id, used.ExternalSystem.Id, used.Description, true})
 			} else if used.Form != nil {
-				usages = append(usages, usage{persona.Id, used.Form.ImplementedBy.Id, used.Description, false, true})
+				usages = append(usages, usage{persona.Id, used.Form.ImplementedBy.Id, used.Description, true})
 			} else if used.View != nil {
-				usages = append(usages, usage{persona.Id, used.View.ImplementedBy.Id + "_db", used.Description, false, true})
+				usages = append(usages, usage{persona.Id, used.View.On.Id + "_db", used.Description, true})
 			}
 		}
 		printer.End()
@@ -105,11 +104,9 @@ func printServices(services []*Service, printer *Printer) []usage {
 		printer.PrintLn("tags \"Service\" \"", service.State.String(), "\"")
 		for _, call := range service.Calls {
 			if call.ExternalSystemId != "" {
-				usages = append(usages, usage{service.Id, call.ExternalSystemId, call.Description,
-					call.DataFlow == Bidirectional, false})
+				usages = append(usages, usage{service.Id, call.ExternalSystemId, call.Description, false})
 			} else {
-				usages = append(usages, usage{service.Id, call.ServiceId, call.Description,
-					call.DataFlow == Bidirectional, false})
+				usages = append(usages, usage{service.Id, call.ServiceId, call.Description, false})
 			}
 		}
 		for _, dataStore := range service.DataStores {
@@ -119,8 +116,7 @@ func printServices(services []*Service, printer *Printer) []usage {
 			} else {
 				id = id + "_q"
 			}
-			usages = append(usages, usage{service.Id, id, dataStore.Description,
-				dataStore.DataFlow == Bidirectional, false})
+			usages = append(usages, usage{service.Id, id, dataStore.Description, false})
 		}
 		printer.End()
 		printer.PrintLn("}")
@@ -169,15 +165,17 @@ func printExternalSystems(model *ArchitectureModel, printer *Printer) []usage {
 	for _, externalSystem := range model.ExternalSystems {
 		printer.PrintLn(externalSystem.Id, " = softwareSystem \"", externalSystem.Name, "\" {")
 		printer.Start()
-		printer.PrintLn("tags \"External System\"")
+		printer.Print("tags \"External System\"")
+		if externalSystem.Type != "" {
+			printer.Print(" \"", externalSystem.Type, "\"")
+		}
+		printer.NewLine()
 		printDescription(externalSystem, printer)
 		for _, call := range externalSystem.Calls {
 			if call.ExternalSystemId != "" {
-				usages = append(usages, usage{externalSystem.Id, call.ExternalSystemId, call.Description,
-					call.DataFlow == Bidirectional, false})
+				usages = append(usages, usage{externalSystem.Id, call.ExternalSystemId, call.Description, false})
 			} else if call.ServiceId != "" {
-				usages = append(usages, usage{externalSystem.Id, call.ServiceId, call.Description,
-					call.DataFlow == Bidirectional, false})
+				usages = append(usages, usage{externalSystem.Id, call.ServiceId, call.Description, false})
 			}
 		}
 		printer.End()
@@ -198,9 +196,6 @@ func printUsages(usages []usage, printer *Printer) {
 			printer.PrintLn("tags \"Using\"")
 			printer.End()
 			printer.Print("}")
-		} else if usage.bidirectional {
-			printer.NewLine()
-			printer.Print(usage.used, " -> ", usage.user)
 		}
 		printer.NewLine()
 	}
@@ -262,6 +257,19 @@ func printElementStyles(printer *Printer) {
 	printer.PrintLn("background #e2e2e2")
 	printer.PrintLn("shape RoundedBox")
 	printer.PrintLn("stroke black")
+	printer.End()
+	printer.PrintLn("}")
+
+	printer.PrintLn("element \"central\" {")
+	printer.Start()
+	printer.PrintLn("background #a2c4c9")
+	printer.End()
+	printer.PrintLn("}")
+
+	printer.PrintLn("element \"local\" {")
+	printer.Start()
+	printer.PrintLn("background #38761d")
+	printer.PrintLn("color white")
 	printer.End()
 	printer.PrintLn("}")
 
