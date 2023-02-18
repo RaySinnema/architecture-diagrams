@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"sort"
 )
 
 func main() {
@@ -42,6 +43,10 @@ func lintFile(fileName string) {
 
 func listIssues(fileName string, issues []Issue) {
 	fmt.Printf("Issues for %v\n", fileName)
+	sort.Slice(issues, func(i, j int) bool {
+		return issues[i].Line < issues[j].Line
+	})
+
 	for _, issue := range issues {
 		fmt.Printf("%s\n", issue)
 	}

@@ -43,10 +43,12 @@ func (p *Printer) writeIndent() {
 	p.builder.WriteString(p.indent)
 }
 
+const INDENT = "    "
+
 func (p *Printer) Start() {
-	p.indent = fmt.Sprintf("%s  ", p.indent)
+	p.indent = fmt.Sprintf("%s%s", p.indent, INDENT)
 }
 
 func (p *Printer) End() {
-	p.indent = p.indent[:len(p.indent)-2]
+	p.indent = p.indent[:len(p.indent)-len(INDENT)]
 }

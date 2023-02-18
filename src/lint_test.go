@@ -1244,7 +1244,7 @@ func TestInvalidWorkflow(t *testing.T) {
     steps:
       - performer: bar
         view: baz
-`, error: "Unknown service 'bar'"},
+`, error: "Unknown service or persona 'bar'"},
 		{definition: `workflows:
   foo:
     steps:

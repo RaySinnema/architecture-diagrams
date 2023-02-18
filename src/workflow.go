@@ -330,11 +330,22 @@ func (w WorkflowCollector) connectFormPerformer(step *Step, model *ArchitectureM
 }
 
 func (w WorkflowCollector) connectViewPerformer(step *Step, model *ArchitectureModel) []Issue {
-	service, issue := findServiceWithView(step.node, step.PerformerId, step.View, model)
-	if issue != nil {
-		return []Issue{*issue}
+	service, found := model.findServiceById(step.PerformerId)
+	if found {
+		_, found = service.findDatabaseView(step.View)
+		if found {
+			step.Performer = service
+		} else {
+			return []Issue{*NodeError(fmt.Sprintf("Service '%v' doesn't have a database with view '%v'", step.PerformerId, step.View), step.node)}
+		}
+	} else {
+		persona, found := model.findPersonaById(step.PerformerId)
+		if found {
+			step.Performer = persona
+		} else {
+			return []Issue{*NodeError(fmt.Sprintf("Unknown service or persona '%v'", step.PerformerId), step.node)}
+		}
 	}
-	step.Performer = service
 	return []Issue{}
 }
 
@@ -356,18 +367,6 @@ func (w WorkflowCollector) connectCommandPerformer(step *Step, model *Architectu
 	}
 	return []Issue{*NodeError(fmt.Sprintf("Unknown form, service, or external system '%v'",
 		step.PerformerId), step.node)}
-}
-
-func findServiceWithView(node *yaml.Node, id string, viewId string, model *ArchitectureModel) (*Service, *Issue) {
-	service, found := model.findServiceById(id)
-	if !found {
-		return nil, NodeError(fmt.Sprintf("Unknown service '%v'", id), node)
-	}
-	_, found = service.findDatabaseView(viewId)
-	if found {
-		return service, nil
-	}
-	return nil, NodeError(fmt.Sprintf("Service '%v' doesn't have a database with view '%v'", id, viewId), node)
 }
 
 func (w WorkflowCollector) connectServicePerformer(step *Step, model *ArchitectureModel) []Issue {
