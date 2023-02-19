@@ -299,8 +299,34 @@ func (s ServiceConnector) connect(model *ArchitectureModel) []Issue {
 		issues = append(issues, connectTechnologies(service, model)...)
 		for _, call := range service.Calls {
 			issues = append(issues, connectTechnologies(call, model)...)
+			issues = append(issues, s.connectCall(call, model)...)
 		}
 		issues = append(issues, s.connectDataStores(service, model)...)
+	}
+	return issues
+}
+
+func (s ServiceConnector) connectCall(call *Call, model *ArchitectureModel) []Issue {
+	issues := make([]Issue, 0)
+	if call.ExternalSystemId != "" {
+		for _, candidate := range model.ExternalSystems {
+			if candidate.Id == call.ExternalSystemId {
+				call.ExternalSystem = candidate
+			}
+		}
+		if call.ExternalSystem == nil {
+			issues = append(issues, *NodeError(fmt.Sprintf("Unknown external system '%v'", call.ExternalSystemId), call.node))
+		}
+	}
+	if call.ServiceId != "" {
+		for _, candidate := range model.Services {
+			if candidate.Id == call.ServiceId {
+				call.Service = candidate
+			}
+		}
+		if call.Service == nil {
+			issues = append(issues, *NodeError(fmt.Sprintf("Unknown service '%v'", call.ServiceId), call.node))
+		}
 	}
 	return issues
 }

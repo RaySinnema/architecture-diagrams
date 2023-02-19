@@ -4,3 +4,4 @@
 /examples/gdpr-middleware.yaml
 /src/archmodel
 *.dsl
+*.dfd
