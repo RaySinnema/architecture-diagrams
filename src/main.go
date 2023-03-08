@@ -10,17 +10,27 @@ func main() {
 	var command string
 	var fileName string
 	var output string
+	var workflow string
 
 	flag.StringVar(&command, "c", "lint", "Command.")
 	flag.StringVar(&fileName, "f", "", "Name of model file")
 	flag.StringVar(&output, "o", "", "Name of output file")
+	flag.StringVar(&workflow, "w", "", "ID of workflow")
 	flag.Parse()
 
 	switch command {
 	case "c4":
-		export(fileName, C4Exporter{}, output)
+		export(fileName, NewC4Exporter(), output)
 	case "dfd":
-		export(fileName, DfdExporter{}, output)
+		export(fileName, NewDfdExporter(), output)
+	case "eventmodel":
+		if workflow == "" {
+			flag.PrintDefaults()
+			return
+		}
+		export(fileName, NewEventModelExporter(workflow), output)
+	case "dot":
+		export(fileName, NewDotExporter(), output)
 	case "lint":
 		lintFile(fileName)
 	}

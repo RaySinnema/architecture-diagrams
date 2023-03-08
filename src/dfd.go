@@ -1,17 +1,22 @@
 package main
 
-type DfdExporter struct {
+type dfdExporter struct {
 }
 
-func (d DfdExporter) export(model ArchitectureModel, printer *Printer) {
+func NewDfdExporter() TextExporter {
+	return dfdExporter{}
+}
+
+func (d dfdExporter) export(model ArchitectureModel, printer *Printer) error {
 	d.printPersonas(model.Personas, printer)
 	d.printExternalSystems(model.ExternalSystems, printer)
 	d.printServices(model.Services, printer)
 	d.printDatabases(model.Databases, printer)
 	d.printQueues(model.Queues, printer)
+	return nil
 }
 
-func (d DfdExporter) printPersonas(personas []*Persona, printer *Printer) {
+func (d dfdExporter) printPersonas(personas []*Persona, printer *Printer) {
 	for _, persona := range personas {
 		printer.PrintLn(persona.Id, ": ", persona.Name)
 		for _, use := range persona.Uses {
@@ -20,7 +25,7 @@ func (d DfdExporter) printPersonas(personas []*Persona, printer *Printer) {
 	}
 }
 
-func (d DfdExporter) printPersonaUse(persona *Persona, use *Used, printer *Printer) {
+func (d dfdExporter) printPersonaUse(persona *Persona, use *Used, printer *Printer) {
 	printer.Print(persona.Id, d.dataFlowOf(use.DataFlow))
 	if use.ExternalSystem != nil {
 		printer.Print(use.ExternalSystem.Id)
@@ -34,7 +39,7 @@ func (d DfdExporter) printPersonaUse(persona *Persona, use *Used, printer *Print
 	printer.NewLine()
 }
 
-func (d DfdExporter) dataFlowOf(dataFlow DataFlow) string {
+func (d dfdExporter) dataFlowOf(dataFlow DataFlow) string {
 	switch dataFlow {
 	case Bidirectional:
 		return " <-> "
@@ -47,7 +52,7 @@ func (d DfdExporter) dataFlowOf(dataFlow DataFlow) string {
 	}
 }
 
-func (d DfdExporter) printExternalSystems(externalSystems []*ExternalSystem, printer *Printer) {
+func (d dfdExporter) printExternalSystems(externalSystems []*ExternalSystem, printer *Printer) {
 	for _, externalSystem := range externalSystems {
 		printer.PrintLn(externalSystem.Id, ": ", externalSystem.Name)
 		for _, call := range externalSystem.Calls {
@@ -56,7 +61,7 @@ func (d DfdExporter) printExternalSystems(externalSystems []*ExternalSystem, pri
 	}
 }
 
-func (d DfdExporter) printCall(fromId string, call *Call, printer *Printer) {
+func (d dfdExporter) printCall(fromId string, call *Call, printer *Printer) {
 	printer.Print(fromId, d.dataFlowOf(call.DataFlow))
 	if call.ExternalSystem != nil {
 		printer.Print(call.ExternalSystem.Id)
@@ -69,7 +74,7 @@ func (d DfdExporter) printCall(fromId string, call *Call, printer *Printer) {
 	printer.NewLine()
 }
 
-func (d DfdExporter) printTechnologies(technologies []*Technology, printer *Printer) {
+func (d dfdExporter) printTechnologies(technologies []*Technology, printer *Printer) {
 	if len(technologies) == 0 {
 		return
 	}
@@ -81,7 +86,7 @@ func (d DfdExporter) printTechnologies(technologies []*Technology, printer *Prin
 	}
 }
 
-func (d DfdExporter) printServices(services []*Service, printer *Printer) {
+func (d dfdExporter) printServices(services []*Service, printer *Printer) {
 	for _, service := range services {
 		printer.PrintLn(service.Id, ": ", service.Name, " { shape: circle }")
 		for _, call := range service.Calls {
@@ -93,7 +98,7 @@ func (d DfdExporter) printServices(services []*Service, printer *Printer) {
 	}
 }
 
-func (d DfdExporter) printDataStoreUse(fromId string, use *DataStoreUse, printer *Printer) {
+func (d dfdExporter) printDataStoreUse(fromId string, use *DataStoreUse, printer *Printer) {
 	printer.Print(fromId, d.dataFlowOf(use.DataFlow))
 	if use.Database != nil {
 		printer.Print(use.Database.Id, "_db")
@@ -107,13 +112,13 @@ func (d DfdExporter) printDataStoreUse(fromId string, use *DataStoreUse, printer
 	printer.NewLine()
 }
 
-func (d DfdExporter) printDatabases(databases []*Database, printer *Printer) {
+func (d dfdExporter) printDatabases(databases []*Database, printer *Printer) {
 	for _, database := range databases {
 		d.printDataStore(database.DataStore, "_db", printer)
 	}
 }
 
-func (d DfdExporter) printDataStore(dataStore DataStore, suffix string, printer *Printer) {
+func (d dfdExporter) printDataStore(dataStore DataStore, suffix string, printer *Printer) {
 	printer.PrintLn(dataStore.Id, suffix, ": ", dataStore.Name, " {")
 	printer.Start()
 	printer.PrintLn("shape: image")
@@ -122,7 +127,7 @@ func (d DfdExporter) printDataStore(dataStore DataStore, suffix string, printer 
 	printer.PrintLn("}")
 }
 
-func (d DfdExporter) printQueues(queues []*DataStore, printer *Printer) {
+func (d dfdExporter) printQueues(queues []*DataStore, printer *Printer) {
 	for _, queue := range queues {
 		d.printDataStore(*queue, "_q", printer)
 	}

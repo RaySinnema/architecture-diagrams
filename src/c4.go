@@ -1,17 +1,22 @@
 package main
 
-type C4Exporter struct {
+type c4Exporter struct {
+}
+
+func NewC4Exporter() TextExporter {
+	return c4Exporter{}
 }
 
 const idOfSystemOfInterest = "system"
 
-func (c C4Exporter) export(model ArchitectureModel, printer *Printer) {
+func (c c4Exporter) export(model ArchitectureModel, printer *Printer) error {
 	printer.PrintLn("workspace {")
 	printer.Start()
-	c.printModel(model, printer)
+	c.printModel(&model, printer)
 	c.printViews(printer)
 	printer.End()
 	printer.PrintLn("}")
+	return nil
 }
 
 type usage struct {
@@ -21,7 +26,7 @@ type usage struct {
 	byPersona   bool
 }
 
-func (c C4Exporter) printModel(model ArchitectureModel, printer *Printer) {
+func (c c4Exporter) printModel(model *ArchitectureModel, printer *Printer) {
 	printer.PrintLn("model {")
 	printer.Start()
 
@@ -34,7 +39,7 @@ func (c C4Exporter) printModel(model ArchitectureModel, printer *Printer) {
 	printer.PrintLn("}")
 }
 
-func (c C4Exporter) printPersons(model ArchitectureModel, printer *Printer) []usage {
+func (c c4Exporter) printPersons(model *ArchitectureModel, printer *Printer) []usage {
 	usages := make([]usage, 0)
 	for _, persona := range model.Personas {
 		printer.PrintLn(persona.Id, " = person \"", persona.Name, "\" {")
@@ -55,20 +60,20 @@ func (c C4Exporter) printPersons(model ArchitectureModel, printer *Printer) []us
 	return usages
 }
 
-func (c C4Exporter) printDescription(describable Describable, printer *Printer) {
+func (c c4Exporter) printDescription(describable Describable, printer *Printer) {
 	if describable.getDescription() != "" {
 		printer.PrintLn("description \"", describable.getDescription(), "\"")
 	}
 }
 
-func (c C4Exporter) printSoftwareSystems(model ArchitectureModel, printer *Printer) []usage {
+func (c c4Exporter) printSoftwareSystems(model *ArchitectureModel, printer *Printer) []usage {
 	var usages = make([]usage, 0)
 	usages = append(usages, c.printSoftwareSystemOfInterest(model, printer)...)
 	usages = append(usages, c.printExternalSystems(model, printer)...)
 	return usages
 }
 
-func (c C4Exporter) printSoftwareSystemOfInterest(model ArchitectureModel, printer *Printer) []usage {
+func (c c4Exporter) printSoftwareSystemOfInterest(model *ArchitectureModel, printer *Printer) []usage {
 	printer.PrintLn(idOfSystemOfInterest, " = softwareSystem \"", model.System.Name, "\" {")
 	printer.Start()
 	printer.PrintLn("tags \"System of Interest\"")
@@ -78,7 +83,7 @@ func (c C4Exporter) printSoftwareSystemOfInterest(model ArchitectureModel, print
 	return usages
 }
 
-func (c C4Exporter) printContainers(model ArchitectureModel, printer *Printer) []usage {
+func (c c4Exporter) printContainers(model *ArchitectureModel, printer *Printer) []usage {
 	usages := make([]usage, 0)
 	usages = append(usages, c.printServices(model.Services, printer)...)
 	c.printDatabases(model.Databases, printer)
@@ -86,7 +91,7 @@ func (c C4Exporter) printContainers(model ArchitectureModel, printer *Printer) [
 	return usages
 }
 
-func (c C4Exporter) printServices(services []*Service, printer *Printer) []usage {
+func (c c4Exporter) printServices(services []*Service, printer *Printer) []usage {
 	usages := make([]usage, 0)
 	for _, service := range services {
 		printer.PrintLn(service.Id, " = container \"", service.Name, "\" {")
@@ -116,7 +121,7 @@ func (c C4Exporter) printServices(services []*Service, printer *Printer) []usage
 	return usages
 }
 
-func (c C4Exporter) printTechnology(implementable Implementable, printer *Printer) {
+func (c c4Exporter) printTechnology(implementable Implementable, printer *Printer) {
 	technologies := implementable.getTechnologies()
 	if len(technologies) == 0 {
 		return
@@ -130,13 +135,13 @@ func (c C4Exporter) printTechnology(implementable Implementable, printer *Printe
 	printer.PrintLn("\"")
 }
 
-func (c C4Exporter) printDatabases(databases []*Database, printer *Printer) {
+func (c c4Exporter) printDatabases(databases []*Database, printer *Printer) {
 	for _, database := range databases {
 		c.printDataStore(&database.DataStore, "_db", "Database", printer)
 	}
 }
 
-func (c C4Exporter) printDataStore(dataStore *DataStore, suffix string, tag string, printer *Printer) {
+func (c c4Exporter) printDataStore(dataStore *DataStore, suffix string, tag string, printer *Printer) {
 	printer.PrintLn(dataStore.Id, suffix, " = container \"", dataStore.Name, "\" {")
 	printer.Start()
 	printer.PrintLn("tags \"", tag, "\"", " \"", dataStore.State.String(), "\"")
@@ -146,13 +151,13 @@ func (c C4Exporter) printDataStore(dataStore *DataStore, suffix string, tag stri
 	printer.PrintLn("}")
 }
 
-func (c C4Exporter) printQueues(dataStores []*DataStore, printer *Printer) {
+func (c c4Exporter) printQueues(dataStores []*DataStore, printer *Printer) {
 	for _, dataStore := range dataStores {
 		c.printDataStore(dataStore, "_q", "Queue", printer)
 	}
 }
 
-func (c C4Exporter) printExternalSystems(model ArchitectureModel, printer *Printer) []usage {
+func (c c4Exporter) printExternalSystems(model *ArchitectureModel, printer *Printer) []usage {
 	usages := make([]usage, 0)
 	for _, externalSystem := range model.ExternalSystems {
 		printer.PrintLn(externalSystem.Id, " = softwareSystem \"", externalSystem.Name, "\" {")
@@ -176,7 +181,7 @@ func (c C4Exporter) printExternalSystems(model ArchitectureModel, printer *Print
 	return usages
 }
 
-func (c C4Exporter) printRelationships(usages []usage, printer *Printer) {
+func (c c4Exporter) printRelationships(usages []usage, printer *Printer) {
 	for _, usage := range usages {
 		printer.Print(usage.user, " -> ", usage.used)
 		if usage.description != "" {
@@ -193,7 +198,7 @@ func (c C4Exporter) printRelationships(usages []usage, printer *Printer) {
 	}
 }
 
-func (c C4Exporter) printViews(printer *Printer) {
+func (c c4Exporter) printViews(printer *Printer) {
 	printer.PrintLn("views {")
 	printer.Start()
 	printer.PrintLn("systemContext ", idOfSystemOfInterest, " {")
@@ -213,7 +218,7 @@ func (c C4Exporter) printViews(printer *Printer) {
 	printer.PrintLn("}")
 }
 
-func (c C4Exporter) printStyles(printer *Printer) {
+func (c c4Exporter) printStyles(printer *Printer) {
 	printer.PrintLn("styles {")
 	printer.Start()
 
@@ -225,7 +230,7 @@ func (c C4Exporter) printStyles(printer *Printer) {
 	printer.PrintLn("}")
 }
 
-func (c C4Exporter) printElementStyles(printer *Printer) {
+func (c c4Exporter) printElementStyles(printer *Printer) {
 	printer.PrintLn("element \"Person\" {")
 	printer.Start()
 	printer.PrintLn("shape Person")
@@ -286,7 +291,7 @@ func (c C4Exporter) printElementStyles(printer *Printer) {
 	printer.PrintLn("}")
 }
 
-func (c C4Exporter) printStateStyles(printer *Printer) {
+func (c c4Exporter) printStateStyles(printer *Printer) {
 	c.printStateStyle(Ok, "b6d7a8", printer)
 	c.printStateStyle(Emerging, "a4c1f4", printer)
 	c.printStateStyle(Review, "fff2cc", printer)
@@ -295,7 +300,7 @@ func (c C4Exporter) printStateStyles(printer *Printer) {
 	c.printStateStyle(Deprecated, "cc0000", printer)
 }
 
-func (c C4Exporter) printStateStyle(state State, backgroundColor string, printer *Printer) {
+func (c c4Exporter) printStateStyle(state State, backgroundColor string, printer *Printer) {
 	printer.PrintLn("element \"", state.String(), "\" {")
 	printer.Start()
 	printer.PrintLn("background #", backgroundColor)
@@ -303,7 +308,7 @@ func (c C4Exporter) printStateStyle(state State, backgroundColor string, printer
 	printer.PrintLn("}")
 }
 
-func (c C4Exporter) printRelationshipStyles(printer *Printer) {
+func (c c4Exporter) printRelationshipStyles(printer *Printer) {
 	printer.PrintLn("relationship \"Relationship\" {")
 	printer.Start()
 	printer.PrintLn("color black")
