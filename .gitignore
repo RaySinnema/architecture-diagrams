@@ -5,3 +5,5 @@
 /src/archmodel
 *.dsl
 *.dfd
+*.d2
+*.dot
