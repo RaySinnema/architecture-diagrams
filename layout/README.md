@@ -16,6 +16,7 @@ These algorithms are also known as _layout engines_.
 The problem is that these generic layout engines don't give good results:
 
 - They have more crossing lines than necessary.
+- They sometimes even have shapes overlap!
 - They fail to highlight relationships between services that are important for understanding the architecture.
   Examples are the [BFF](https://samnewman.io/patterns/architectural/bff/) and
   [Event-Driven Architecture](https://en.wikipedia.org/wiki/Event-driven_architecture#Event_channel) patterns.
@@ -35,24 +36,54 @@ But let's not give up hope just yet.
 
 ## Architecture diagram specifics
 
-If generic algorithms don't give good results, then our only hope seems to be something that's specific to architecture
+If generic algorithms don't give good results, then our only hope lies in something that's specific to architecture
 diagrams, which benefits from its distinct properties.
 So what are those properties?
 
-- Architecture diagrams are usually moderate in size, on the order of 10-100 nodes.
-  Anything bigger than that and people start grouping services to preserve understandability.
 - Nodes in a diagram have shapes with non-negligible sizes.
   Text is usually placed inside the node's shape rather than next to the node.
+  Edges may be attached to different connectors on the same shape.
 - Diagrams usually lay out nodes in a grid and connect them with orthogonal edges, not straight lines.
+- Architecture diagrams are usually moderate in size, on the order of 10-100 nodes.
+  Anything bigger than that and people start grouping services to preserve understandability.
 - Not all nodes in the graph are created equal.
-  We have users, external systems, services, databases, and queues.
-  Depending on the type of diagram, we may separate nodes of different types, e.g. a container diagram would show
-  users and external systems on the outside and services grouped together on the inside.
+  Depending on the type of diagram we may have users, external systems, services, databases, queues, and others.
+  We may separate nodes of different types, e.g. a container diagram would show users and external systems on the
+  outside and services, databases, and queues grouped together on the inside.
 - Depending on the architecture, there are specific groupings we expect to see between the node types, like one
-  database per service in a microservice architecture, or one service writing to and one service reading from a database
-  in [CQRS](https://www.martinfowler.com/bliki/CQRS.html).
+  database per service in a microservice architecture, one service writing to and one service reading from a
+  database in CQRS, or multiple services reading from and writing to a queue in an event-driven architecture.
 
-Let's start with the moderate size.
+
+### Nodes in diagrams
+
+In generic graph drawings, nodes are depicted as small circles, with any text next to them.
+Edges are drawn as straight lines, with or without arrows (undirected vs directed graphs).
+
+In architecture diagrams, edges are generally directed or bidirectional.
+Nodes in architecture diagrams are different types of shapes, with different ratios of width to height.
+Here are some examples:
+
+| Shape           | Ratio |
+|-----------------|-------|
+| Persona         | 3x4   |
+| External system | 3x1   |
+| Service         | 2x1   |
+| Database        | 3x2   |
+| Mobile phone    | 1x2   |
+
+To accommodate these different ratios, it's best to think of a cell in the grid as a 12x12 mini-grid, where the shape
+occupies some cells in the middle of the mini-grid.
+Consider a service in a container diagram with a ratio of 2:1.
+It would be drawn as a block of 6x3 cells in the middle, with 3 empty columns before and after it, 4 empty rows above
+it, and 5 empty rows below it.
+The empty rows and columns are then used to draw the lines and arrows of edges connecting to the node.
+
+### Edges in diagrams
+
+### Diagram size
+
+Next, let's look at the moderate size.
 Even the lower bound of 10 is problematic.
 Let's assume for a moment that all we have to do is line up the nodes in one straight line.
 This is obviously an over-simplification, the real problem is much harder.
