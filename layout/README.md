@@ -16,7 +16,7 @@ These algorithms are also known as _layout engines_.
 The problem is that these generic layout engines don't give good results:
 
 - They have more crossing lines than necessary.
-- They sometimes even have shapes overlap!
+- They sometimes even have overlapping shapes.
 - They fail to highlight relationships between services that are important for understanding the architecture.
   Examples are the [BFF](https://samnewman.io/patterns/architectural/bff/) and
   [Event-Driven Architecture](https://en.wikipedia.org/wiki/Event-driven_architecture#Event_channel) patterns.
@@ -36,9 +36,9 @@ But let's not give up hope just yet.
 
 ## Architecture diagram specifics
 
-If generic algorithms don't give good results, then our only hope lies in something that's specific to architecture
-diagrams, which benefits from its distinct properties.
-So what are those properties?
+If generic graph drawing algorithms don't give good results, then our only hope lies in something that's specific to
+architecture diagrams, which benefits from its distinct properties.
+Here are some of those properties:
 
 - Nodes in a diagram have shapes with non-negligible sizes.
   Text is usually placed inside the node's shape rather than next to the node.
@@ -54,13 +54,15 @@ So what are those properties?
   database per service in a microservice architecture, one service writing to and one service reading from a
   database in CQRS, or multiple services reading from and writing to a queue in an event-driven architecture.
 
+Let's look at some of these differences in more detail to determine how they can impact laying out a diagram.
+
 
 ### Nodes in diagrams
 
 In generic graph drawings, nodes are depicted as small circles, with any text next to them.
 Edges are drawn as straight lines, with or without arrows (undirected vs directed graphs).
 
-In architecture diagrams, edges are generally directed or bidirectional.
+In architecture diagrams, edges are generally directed or even bidirectional.
 Nodes in architecture diagrams are different types of shapes, with different ratios of width to height.
 Here are some examples:
 
@@ -79,12 +81,41 @@ It would be drawn as a block of 6x3 cells in the middle, with 3 empty columns be
 it, and 5 empty rows below it.
 The empty rows and columns are then used to draw the lines and arrows of edges connecting to the node.
 
+
 ### Edges in diagrams
+
+In generic graphs, edges are usually drawn as straight lines.
+Those may or may not have arrows (directed vs undirected graphs).
+
+In architecture diagrams, edges are generally directed or even bidirectional.
+They are usually drawn as orthogonal lines rather than point to point.
+Orthogonal lines consist of one or more line segments that are either completely horizontal or completely vertical.
+The points in between these segments are the _bends_.
+We want as few bends as possible, but sometimes we need a larger number of them to avoid crossing edges, which is worse.
+
+We saw that in a grid layout the shapes take up a significant portion of the cells, with edges drawn in the remaining
+space.
+In case that space is not enough, we need cells without shapes to draw the edges in.
+
+We can use the fact that shapes have non-negligible sizes to allow different edges to connect at different points on the
+same shape.
+Different types of shapes may have different numbers of these _connectors_, but a common choice is 3 each on the top,
+left, right, and bottom.
+Using more connectors significantly reduces the odds of edges crossing each other and even of overlapping.
+
+Some smaller shapes, like those for persona or for mobile phone, may have only a single connector.
+This point is usually the center of the shape.
+Edges connecting to it should be drawn "under" the shape, unless they have an arrow at the single connector.
+
+Even shapes with more connectors may have them inside their boundaries, rather than on their sides.
+This is especially likely for round shapes, like those for databases and queues.
+Here, we want to draw the edges "on top of" the shape, even when there is no arrow at the connector.
+
 
 ### Diagram size
 
-Next, let's look at the moderate size.
-Even the lower bound of 10 is problematic.
+Earlier we said that diagrams are graphs of moderate size, on the order of 10-100 nodes.
+But even the lower bound of 10 is problematic.
 Let's assume for a moment that all we have to do is line up the nodes in one straight line.
 This is obviously an over-simplification, the real problem is much harder.
 Even for this simple layout, there are 10! = 3.6M possibilities.
@@ -97,7 +128,7 @@ If the search space is too big to search exhaustively, then a couple of options 
 1. Prune the search space to make it smaller by quickly rejecting significant parts of it.
   Then comprehensively search the remainder of the space.
 2. Use heuristics.
-3. Use a local search algorithm, like Simulated Annealing (SA) or Genetic Algorithms (GA).
+3. Use a local search algorithm, like Simulated Annealing (SA) or Genetic Algorithm (GA).
 
 I'm not aware of any techniques that work well using the first or second approaches.
 The first one doesn't even sound very promising.
@@ -118,20 +149,26 @@ A Genetic Algorithm requires the following:
 
 1. A representation of solutions as a _genome_.
   This genome usually consist of multiple units, the _genes_.
-  The GA starts with an initial collection of random genomes, the _pool_.
+  The GA starts with an initial collection of random genomes in its _pool_.
 2. A way to evaluate how well the solution solves the problem.
   This _fitness function_ takes the genome as input and outputs the _fitness_, a number between 0 (bad) and 1 (good).
+  The GA's job is to find a genome with as high a fitness as possible.
+  GAs usually tackle multidimensional optimization problems.
+  In those cases it's common for the fitness function to be the weighted average of several partial fitness functions,
+  one per dimension.
+  Each partial fitness function also returns numbers between 0 and 1.
 3. Ways to derive new solutions from existing ones.
   These _genetic operators_ take one or more genomes as input and produce one or more new genomes.
 4. A way to select genomes from the pool to form a new pool in a new _iteration_.
   This _selection mechanism_ is usually solution-agnostic and takes only the fitness of genomes into account.
   Examples are roulette wheel selection, rank selection, and tournament selection.
-5. A way to determine when to stop iteration.
+5. A way to determine when to stop iterating.
   This _termination mechanism_ is also usually solution-agnostic, looking only at the fitness of genomes in the pool.
   The simplest termination mechanism is to perform a fixed number of iterations.
-  More advanced termination mechanisms look at the (distribution of) fitness of the genomes.
+  More advanced termination mechanisms look at the fitness of the genomes and stop when it reaches a plateau or when
+  it reaches some known best value (which is usually lower than 1).
 
-Let's look at these in the context of laying out diagrams.
+Let's look at these parts in the context of laying out diagrams.
 
 
 ### The genome
@@ -146,22 +183,22 @@ How big does the grid need to be?
 
 A node in the grid has 8 neighbors.
 For highly connected nodes, some of that space can't be used, since it's needed to draw edges.
-To be on the safe side, let's use only 1 out of every 3 grid points for nodes.
-Then the grid must have at least `3n` points.
+To be on the safe side, let's use only 1 out of every 3 cells for nodes.
+Then the grid must have at least `3n` cells.
 
 The optimal grid is usually not square.
 By making one side of the grid longer than the other, we create more room to connect nodes.
-But making the grid too short also doesn't work.
-In practice, a ratio of about 2:1 seems to work best.
+But the grid must also be tall enough.
+In practice, ratios of 2:1 to 4:1 seems to work best.
+We can either pick something in that range, or try different ratios and pick the best result.
+Whether this is feasible depends on how fast the GA is.
 
-One of the distinct characteristics of a diagram compared to a generic graph is that the nodes in a diagram are
-shapes that have a size, whereas nodes in generic graphs are drawn as small circles.
-Diagrams need the larger size to place text inside the shape.
 Most shapes (e.g. rectangles) are drawn wider than high, although the reverse certainly occurs (e.g. person shapes).
 To be visually pleasing, it then makes sense for the diagram itself to be wider than high.
 
+Let's look at an example with a ratio of 2:1.
 If `w` is the width of the grid and `h` is its height, then this means that we want `w=2h`.
-The number of points in the grid is then `wh = 2h² = 3n`, which gives `h=⌈√(3/2·n)⌉`.
+The number of cells in the grid is then `wh = 2h² = 3n`, which gives `h=⌈√(3/2·n)⌉`.
 For example, if `n=16`, then `h=5` and `w=10`.
 
 Now that we have worked out the coordinates, we need to design the genome so that it assigns those coordinates to the
@@ -172,7 +209,16 @@ genome is a sequence of `n` genes, one per node.
 
 #### Edges
 
-TODO
+Since edges in a diagram are orthogonal lines, we need to store the position of all the bends.
+Unlike nodes, which are fixed to the center of the grid's cells, edges can go anywhere, so their positions aren't
+grid coordinates.
+It makes sense to limit them to the mini-grid cells, which leads to their coordinates being multiples of one-twelfth
+of a grid coordinate.
+
+One representation would be a gene that consists of a list of mini-grid coordinates (one per bend).
+The first and last point of the edge are also included, and they're limited to the connector points on the respective
+shapes.
+The genome is then a sequence of genes, one per edge in the diagram.
 
 
 ### The fitness function
@@ -180,32 +226,46 @@ TODO
 The fitness function has to convert a genome into a number between 0 and 1.
 This single number has to cover multiple dimensions of "goodness" or "badness" of the layout:
 
-1. The fewest number of crossings, `c`.
-  If there are `E` edges, then `0 ≤ c ≤ E-1`, so `Fc = 1 - c / (E-1)` works nicely.
-  In order to calculate `c`, we need to know how the edges of the graph go, to see which cross.
-  So we either need to add the position of the edges to the genome, or calculate these positions inside the fitness
-  function.
-2. The relationships between different types of nodes.
-  For instance, in a container diagram you usually want to put the personas and external systems at the edge and the
-  services, databases, and queues in the middle of the diagram.
-3. Symmetric placement of nodes is better than asymmetric placement.
-  This holds in both directions.
-4. Symmetric placement of connections.
+1. The number of edge crossings, `c`.
+  With many bends a given edge could cross the same edge multiple times.
+  We still count this as one crossing.
+  If there are `E` edges, then `0 ≤ c ≤ E(E-1)`, so `Fc = 1 - c / E(E-1)` as partial fitness function should work nicely.
+2. The number of edge overlaps, `o`.
+  This is similar to edge crossings, as so is the partial fitness function `Fo`.
+3. Symmetric placement of connections.
   If nodes have 3 connectors per side, then we prefer to use the middle connector if there is only one edge attached, 
   but we want to use the outer two if there are two edges attached.
-5. Non-overlapping connectors.
-  If there are more edges connected to a node than it has connectors, then we have to overlap edges onto the same
-  connector.
-  Otherwise, we prefer not to do that.
-6. A smaller size of the grid.
+  The partial fitness function for this, `Fcs`, is like the one for crossings: we calculate the ratio of connections that
+  meet our expectations.
+4. The size of the grid.
   If instead of a `w·h` grid we can make do with something smaller, then that's better.
   In other words, we prefer solutions where entire rows or columns are unused.
-7. We like the visual expression of architectural patterns.
+  The partial fitness function for this, `Fs`, is the ratio of completely empty rows and columns.
+5. The relationships between different types of nodes.
+  For instance, in a container diagram you usually want to put the personas and external systems at the edge and the
+  services, databases, and queues in the middle of the diagram.
+  The partial fitness function for this, `Fr`, depends on the diagram type.
+  For the example of a container diagram, `Fr`, would calculate the ratio of nodes that meet the relationship
+  requirements.
+6. We like the visual expression of architectural patterns.
   For example, if the architecture is based on microservices, each of which has their own database, then we'd like to
   see the same spatial relationship between the service and its database everywhere.
   This depends on being able to recognize those patterns, of course.
+  Let's keep this out of scope for the first iteration.
+7. Symmetric placement of nodes.
+  Symmetry is always appealing, but while it's easy to spot by the human eye, it's not as easy to define in a partial
+  fitness function.
+  Let's keep this out of scope for the first iteration.
 
-TODO: Finish and combine into one formula.
+Combining all of the above gives:
+
+```
+F = Wc·Fc + Wo·Fo + Wcs·Fcs + Ws·Fs + Wr·Fr
+```
+where
+```
+Wc + Wo + Wcs + Ws + Wr = 1
+```
 
 
 ### The generic operators
