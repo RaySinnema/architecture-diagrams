@@ -192,6 +192,8 @@ But the grid must also be tall enough.
 In practice, ratios of 2:1 to 4:1 seems to work best.
 We can either pick something in that range, or try different ratios and pick the best result.
 Whether this is feasible depends on how fast the GA is.
+Alternatively, we could just use a square grid where each side is `⌈√(3n)⌉` and depend on compaction later.
+We'll discuss that below.
 
 Most shapes (e.g. rectangles) are drawn wider than high, although the reverse certainly occurs (e.g. person shapes).
 To be visually pleasing, it then makes sense for the diagram itself to be wider than high.
@@ -207,6 +209,10 @@ The most straightforward representation lists the coordinates for the nodes one 
 In other words, a single gene consists of integer x and y coordinates, where `0 ≤ x ≤ w-1` and `0 ≤ y ≤ h-1`, and a 
 genome is a sequence of `n` genes, one per node.
 
+When we initialize the pool at the start of the GA, we're supposed to create random genomes.
+We should, however, make sure that all nodes take different positions. 
+
+
 #### Edges
 
 Since edges in a diagram are orthogonal lines, we need to store the position of all the bends.
@@ -219,6 +225,12 @@ One representation would be a gene that consists of a list of mini-grid coordina
 The first and last point of the edge are also included, and they're limited to the connector points on the respective
 shapes.
 The genome is then a sequence of genes, one per edge in the diagram.
+
+When we initialize the pool at the start of the GA, we need to randomize the edges too.
+We can't just pick random bends; they must make an actual path from the source to the target node.
+When the x coordinates of the nodes are the same, we need no bend.
+The same holds for when the y coordinates of the nodes match.
+Otherwise, we need exactly one bend, with the x coordinate from one node and the y coordinate from the other.
 
 
 ### The fitness function
@@ -245,8 +257,8 @@ This single number has to cover multiple dimensions of "goodness" or "badness" o
   For instance, in a container diagram you usually want to put the personas and external systems at the edge and the
   services, databases, and queues in the middle of the diagram.
   The partial fitness function for this, `Fr`, depends on the diagram type.
-  For the example of a container diagram, `Fr`, would calculate the ratio of nodes that meet the relationship
-  requirements.
+  For the example of a container diagram, `Fr`, would calculate the ratio of nodes that meet the above relationship
+  requirement.
 6. We like the visual expression of architectural patterns.
   For example, if the architecture is based on microservices, each of which has their own database, then we'd like to
   see the same spatial relationship between the service and its database everywhere.
@@ -270,4 +282,67 @@ Wc + Wo + Wcs + Ws + Wr = 1
 
 ### The generic operators
 
-TODO
+Now we need some operators that introduce the variety upon which selection works.
+The traditional genetic operators are _mutation_ and _crossover_.
+
+#### Mutation
+
+Mutation takes a genome and changes it randomly in a single spot.
+Since our genomes consist of two parts, we need at least two mutation operators.
+
+Mutation for node genes can move a node to a different position in the grid.
+Since no good solution will ever have two nodes in the same position, it makes sense to ensure that mutation doesn't
+inadvertently do that.
+For instance, we could move a node to a random empty position or swap two nodes.
+Either of those options can be restricted to neighbors or be allowed to operate over the entire grid.
+We can even leave that up to chance, where more local operations have higher probability.
+
+Any movement of a node invalidates the bends that the GA had built up thus far, so they need to be reset.
+We can use the same procedure for that as when initializing the genome.
+
+Mutation for edge genes falls into two categories: changing endpoints and changing bends.
+For the first, we could move the edge to a random unoccupied connector.
+We may even have to allow picking an occupied connector to avoid getting stuck in a local optimum.
+Whenever we change an endpoint, we have to reset the bends to keep the edge orthogonal.
+
+Mutating bends is a bit more involved.
+
+For straight edges, i.e. without bends, we can introduce 3 or 4 bends:
+
+![Adding bends to a straight edge](adding-bends-to-straight-edge.png)
+
+For edges with bends, we can either remove bends or add more.
+Removing bends is the inverse of an operation where we introduce bends.
+Introducing bends replaces one bend with either 3 or 5 new ones:
+
+![Adding bends to a non-straight edge](adding-bends-to-nonstraight-edge.png)
+
+
+#### Crossover
+
+Crossover is a genetic operator that takes two genomes, breaks each of them up into two pieces, and assembles two new
+genomes that consist of one piece of each of its parents.
+
+![Crossover](crossover.png)
+
+Crossover is useful because it allows jumping large distances in the solution space.
+However, I'm having a hard time seeing how this would apply to edges, since those are constrained by the nodes that
+they connect.
+
+For the node part of the genome, we also can't naively swap gene sequences, since that could violate the property that
+no two nodes may occupy the same position.
+Technically we could allow it and then punish it in the fitness function, but the GA performs better if it simply
+can't produce invalid "solutions".
+
+One way that could work is to start at a random gene in one genome and keep adding subsequent genes as long as the
+bounding rectangle surrounding the nodes has a counterpart in the other genome.
+It's not guaranteed that this would produce a sequence of more than one gene.
+If the sequence is only one gene long, then the crossover operation degenerates to a mutation that swaps nodes.
+So we could remove that mutation operator.
+
+Instead of picking two random genomes to cross over, we could pick one and then pick the one genome from the remainder
+that gives the longest swap sequence.
+Many variations on this theme are possible.
+We need to experiment a little here to see what works and what doesn't.
+
+As before, any time a node moves in the grid, we have to reset all its connections.
