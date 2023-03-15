@@ -192,8 +192,10 @@ But the grid must also be tall enough.
 In practice, ratios of 2:1 to 4:1 seems to work best.
 We can either pick something in that range, or try different ratios and pick the best result.
 Whether this is feasible depends on how fast the GA is.
-Alternatively, we could just use a square grid where each side is `⌈√(3n)⌉` and depend on compaction later.
-We'll discuss that below.
+Alternatively, we could just use a square grid where each side is `2⌈√(3n)⌉` and depend on compaction later.
+For the best results, we'll have to do compaction anyway.
+The downside is the potentially longer runtime for the GA, since the search space is larger.
+We'll discuss compaction below.
 
 Most shapes (e.g. rectangles) are drawn wider than high, although the reverse certainly occurs (e.g. person shapes).
 To be visually pleasing, it then makes sense for the diagram itself to be wider than high.
