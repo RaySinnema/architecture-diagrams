@@ -15,6 +15,7 @@ type Size struct {
 }
 
 type Shape struct {
+	Id            string
 	Text          string
 	Size          Size
 	NumConnectors map[Side][]int

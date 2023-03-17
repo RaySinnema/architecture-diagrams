@@ -52,3 +52,11 @@ func (p *Population[G]) best() *Genome[G] {
 	}
 	return result
 }
+
+func (p *Population[G]) avgFitness() Fitness {
+	totalFitness := 0.0
+	for _, genome := range p.genomes {
+		totalFitness += genome.Fitness
+	}
+	return totalFitness / Fitness(len(p.genomes))
+}

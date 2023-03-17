@@ -51,3 +51,30 @@ type maxFitnessAchived[G Cloner[G]] struct {
 func (m maxFitnessAchived[G]) isMet(population Population[G]) bool {
 	return math.Abs(m.target-population.best().Fitness) < 1e-6
 }
+
+func NewNoProgressMade[G Cloner[G]](iterations int) Termination[G] {
+	return &noProgressMade[G]{0, make([]Fitness, iterations)}
+}
+
+type noProgressMade[G Cloner[G]] struct {
+	index     int
+	fitnesses []Fitness
+}
+
+func (f *noProgressMade[G]) isMet(population Population[G]) bool {
+	f.fitnesses[f.index] = population.avgFitness()
+	if f.index < len(f.fitnesses) {
+		f.index++
+		return false
+	}
+	f.index = (f.index + 1) % len(f.fitnesses)
+	prev := f.fitnesses[0]
+	const maxFitnessDelta = 1e-6
+	for i := 1; i < len(f.fitnesses); i++ {
+		if math.Abs(prev-f.fitnesses[i]) > maxFitnessDelta {
+			return false
+		}
+		prev = f.fitnesses[i]
+	}
+	return true
+}
