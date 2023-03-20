@@ -14,6 +14,10 @@ type Size struct {
 	Height int
 }
 
+func (s Size) area() int {
+	return s.Width * s.Height
+}
+
 type Shape struct {
 	Id            string
 	Text          string
@@ -28,6 +32,10 @@ type Connection struct {
 	StartSymbol ConnectionSymbol
 	End         *Shape
 	EndSymbol   ConnectionSymbol
+}
+
+func (c Connection) connectsTo(shape *Shape) bool {
+	return c.Start == shape || c.End == shape
 }
 
 type Diagram struct {

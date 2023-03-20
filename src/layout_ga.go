@@ -59,12 +59,53 @@ func calcGridSize(diagram *Diagram) Size {
 }
 
 func mutateDiagram(g *Genome[*DiagramGene], position int) *DiagramGene {
+	gene := g.Genes[position]
+	if gene.isNode() {
+		return mutateNode(gene, g)
+	}
+	return mutateEdge(gene, g)
+}
+
+func mutateNode(gene *DiagramGene, genome *Genome[*DiagramGene]) *DiagramGene {
+	result := *gene
+	result.gridPosition = randomEmptyPositionIn(genome)
+	resetEdgesFor(result.shape(), genome)
+	return &result
+}
+
+func randomEmptyPositionIn(genome *Genome[*DiagramGene]) int {
+	max := genome.Genes[0].context.size.area()
+	options := zeroTo(max)
+	for _, gene := range genome.Genes {
+		if gene.isNode() {
+			max--
+			options[gene.gridPosition] = options[max]
+		}
+	}
+	return options[randomInt(max)]
+}
+
+func randomInt(max int) int {
+	return int(rand.Int31n(int32(max)))
+}
+
+func resetEdgesFor(shape *Shape, genome *Genome[*DiagramGene]) {
+	for _, gene := range genome.Genes {
+		if gene.isEdge() {
+			connection := gene.connection()
+			if connection.connectsTo(shape) {
+				gene.path = defaultPathFor(connection)
+			}
+		}
+	}
+}
+
+func mutateEdge(gene *DiagramGene, genome *Genome[*DiagramGene]) *DiagramGene {
 	// TODO: Implement
-	return g.Genes[position]
+	return gene
 }
 
 func crossOverDiagram(parent1 *Genome[*DiagramGene], parent2 *Genome[*DiagramGene]) (*Genome[*DiagramGene], *Genome[*DiagramGene]) {
-	// TODO: Implement
 	return parent1, parent2
 }
 
@@ -130,6 +171,22 @@ func (d *DiagramGene) clone() *DiagramGene {
 	return &clone
 }
 
+func (d *DiagramGene) isNode() bool {
+	return d.shapeIndex >= 0
+}
+
+func (d *DiagramGene) shape() *Shape {
+	return d.context.diagram.Shapes[d.shapeIndex]
+}
+
+func (d *DiagramGene) isEdge() bool {
+	return d.connectionIndex >= 0
+}
+
+func (d *DiagramGene) connection() *Connection {
+	return d.context.diagram.Connections[d.connectionIndex]
+}
+
 type diagramContext struct {
 	size    Size
 	diagram *Diagram
@@ -139,9 +196,9 @@ func createDiagramGenome(size Size, diagram *Diagram) *Genome[*DiagramGene] {
 	context := &diagramContext{size, diagram}
 	genes := make([]*DiagramGene, len(diagram.Shapes)+len(diagram.Connections))
 	positions := zeroTo(size.Width * size.Height)
-	max := int32(len(positions))
+	max := len(positions)
 	for index := 0; index < len(diagram.Shapes); index++ {
-		pos := rand.Int31n(max)
+		pos := randomInt(max)
 		shapeGene := DiagramGene{context, index, positions[pos], -1, nil}
 		genes[index] = &shapeGene
 		max--
@@ -149,14 +206,14 @@ func createDiagramGenome(size Size, diagram *Diagram) *Genome[*DiagramGene] {
 	}
 	for index := 0; index < len(diagram.Connections); index++ {
 		connection := diagram.Connections[index]
-		path := defaultPathBetween(connection.Start, connection.End)
+		path := defaultPathFor(connection)
 		connectionGene := DiagramGene{context, -1, -1, index, path}
 		genes[index] = &connectionGene
 	}
 	return &Genome[*DiagramGene]{genes, 0.0}
 }
 
-func defaultPathBetween(start *Shape, end *Shape) *path {
+func defaultPathFor(connection *Connection) *path {
 	// TODO: Implement
 	return nil
 }
