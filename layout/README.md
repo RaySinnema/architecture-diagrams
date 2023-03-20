@@ -308,10 +308,14 @@ We may even have to allow picking an occupied connector to avoid getting stuck i
 Whenever we change an endpoint, we have to reset the bends to keep the edge orthogonal.
 
 Mutating bends is a bit more involved.
+We show the basic patterns here, but these can be expressed in multiple directions.
 
 For straight edges, i.e. without bends, we can introduce 3 or 4 bends:
 
 ![Adding bends to a straight edge](adding-bends-to-straight-edge.png)
+
+Introducing 3 bends is only possible if the connector allows connecting at multiple angles, which wouldn't normally be
+the case.
 
 For edges with bends, we can either remove bends or add more.
 Removing bends is the inverse of an operation where we introduce bends.
@@ -319,13 +323,20 @@ Introducing bends replaces one bend with either 3 or 5 new ones:
 
 ![Adding bends to a non-straight edge](adding-bends-to-nonstraight-edge.png)
 
+Introducing 5 bends is only possible if there is room in the grid.
+
 
 #### Crossover
 
-Crossover is a genetic operator that takes two genomes, breaks each of them up into two pieces, and assembles two new
-genomes that consist of one piece of each of its parents.
+Crossover is a genetic operator that takes two genomes (the parents), breaks each of them up into two pieces, and
+assembles two new genomes (the children) that consist of one piece of each of its parents.
 
 ![Crossover](crossover.png)
+
+This is actually a special case of partial crossover, where the swapped part is at the end of the genome.
+But that needn't be the case:
+
+![Partial crossover](partial-crossover.png)
 
 Crossover is useful because it allows jumping large distances in the solution space.
 However, I'm having a hard time seeing how this would apply to edges, since those are constrained by the nodes that
@@ -337,10 +348,11 @@ Technically we could allow it and then punish it in the fitness function, but th
 can't produce invalid "solutions".
 
 One way that could work is to start at a random gene in one genome and keep adding subsequent genes as long as the
-bounding rectangle surrounding the nodes has a counterpart in the other genome.
+nodes in the bounding rectangle of one parent match those in the same bounding rectangle in the other parent.
+
 It's not guaranteed that this would produce a sequence of more than one gene.
 If the sequence is only one gene long, then the crossover operation degenerates to a mutation that swaps nodes.
-So we could remove that mutation operator.
+So we should remove that mutation operator.
 
 Instead of picking two random genomes to cross over, we could pick one and then pick the one genome from the remainder
 that gives the longest swap sequence.
